@@ -5,7 +5,9 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatPanel } from "./ChatPanel";
 import { CodePanel } from "./CodePanel";
 import { MobileBlocker } from "./MobileBlocker";
+import { VersionHistory } from "./VersionHistory";
 import { MIN_CREDITS_TO_GENERATE } from "@/lib/constants";
+import { History } from "lucide-react";
 import { toast } from "sonner";
 import type {
   Message,
@@ -64,6 +66,7 @@ export function WorkspaceClient({
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusLog, setStatusLog] = useState<StatusStep[]>([]);
   const [isImproving, setIsImproving] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // AbortController refs — used to cancel in-flight streams
   const generateAbortRef = useRef<AbortController | null>(null);
@@ -349,6 +352,11 @@ export function WorkspaceClient({
     setFileData(patches);
   }, []);
 
+  const handleRestore = useCallback((restoredFileData: FileData, restoredMessages: Message[]) => {
+    setFileData(restoredFileData);
+    setMessages(restoredMessages);
+  }, []);
+
   return (
     <>
       {/* Mobile blocker — visible only on small screens */}
@@ -357,7 +365,7 @@ export function WorkspaceClient({
       </div>
 
       {/* Workspace — visible only on md+ screens */}
-      <div className="hidden md:flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a]">
+      <div className="hidden md:flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a] relative">
         <ChatPanel
           isImproving={isImproving}
           messages={messages}
@@ -386,6 +394,25 @@ export function WorkspaceClient({
           appTitle={fileData?.title ?? workspace?.title ?? null}
           isImproving={isImproving}
           isProUser={userPlan === "pro"}
+        />
+
+        {/* History toggle button */}
+        {workspaceId && (
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            className="absolute right-4 bottom-4 z-30 flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-[#111]/90 px-3.5 text-xs font-medium text-white/50 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-[#1a1a1a] hover:text-white/80 hover:shadow-lg hover:shadow-blue-500/5 active:scale-95"
+          >
+            <History className="h-3.5 w-3.5" />
+            History
+          </button>
+        )}
+
+        {/* Version History Panel */}
+        <VersionHistory
+          workspaceId={workspaceId}
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onRestore={handleRestore}
         />
       </div>
     </>
