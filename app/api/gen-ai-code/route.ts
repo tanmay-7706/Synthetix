@@ -302,6 +302,16 @@ export async function POST(request: NextRequest) {
           }),
         ]);
 
+        // Save a version snapshot for time-travel
+        await db.version.create({
+          data: {
+            workspaceId: workspace.id,
+            label: (assistantMessage ?? "Generation").slice(0, 80),
+            fileData: newFileData as never,
+            messages: updatedMessages as never,
+          },
+        });
+
         const updatedUser = await db.user.findUnique({
           where: { id: userId },
           select: { credits: true },
