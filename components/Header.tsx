@@ -12,7 +12,9 @@ export default async function Header() {
   const user = await checkUser();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/6 bg-white/7 backdrop-blur-md">
+    <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/7 backdrop-blur-md">
+      {/* Gradient bottom border */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
       <nav className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 select-none">
