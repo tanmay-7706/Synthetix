@@ -206,6 +206,16 @@ RULES:
           }),
         ]);
 
+        // Save a version snapshot for time-travel
+        await db.version.create({
+          data: {
+            workspaceId,
+            label: (finalSummary || "Agent improvement").slice(0, 80),
+            fileData: newFileData as never,
+            messages: [] as never,
+          },
+        });
+
         const updatedUser = await db.user.findUnique({
           where: { id: userId },
           select: { credits: true },
