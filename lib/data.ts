@@ -1,4 +1,4 @@
-import { Sparkles, Zap, Code2, Eye, Package, ImageIcon } from "lucide-react";
+import { Sparkles, Zap, Code2, Eye, Package, ImageIcon, History } from "lucide-react";
 
 export const SUGGESTIONS = [
   "A Spotify stats dashboard with charts",
@@ -40,6 +40,11 @@ export const FEATURES = [
     label: "Image-aware prompts",
     desc: "Attach screenshots or mockups to your prompt. The AI reads them and generates code that matches your design.",
   },
+  {
+    icon: History,
+    label: "Version history",
+    desc: "Every generation is saved as a version. Time-travel to any previous state and restore it with one click.",
+  },
 ];
 
 export const STEPS = [
@@ -56,7 +61,7 @@ export const STEPS = [
   {
     number: "03",
     label: "Preview & refine",
-    desc: "See your app live instantly. Keep chatting to iterate — AI remembers the full conversation.",
+    desc: "See your app live instantly. Keep chatting to iterate — every change is versioned so you can always go back.",
   },
   {
     number: "04",
