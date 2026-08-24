@@ -23,7 +23,7 @@ export function ProjectCard({ projects }: ProjectCardProps) {
         return (
           <div
             key={project.id}
-            className="group relative flex flex-col rounded-xl border border-white/6 bg-[#0f0f0f] p-4 transition-colors hover:border-white/10 hover:bg-[#111111]"
+            className="group relative flex flex-col rounded-xl border border-white/6 bg-[#0f0f0f] p-4 transition-all duration-300 hover:border-blue-500/15 hover:bg-[#111111] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/5"
           >
             <Link
               href={`/workspace?id=${project.id}`}
