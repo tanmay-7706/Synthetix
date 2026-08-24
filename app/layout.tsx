@@ -22,7 +22,8 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Synthetix - AI App Builder",
-  description: "",
+  description:
+    "Describe what you want to build. Synthetix uses AI to write the code, pick the packages, and render a live preview — all inside your browser.",
   icons: {
     icon: "/logo-short.png",
   },
