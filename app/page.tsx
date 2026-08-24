@@ -61,8 +61,10 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] selection:bg-white/20">
-      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      {/* ── HERO ──────────────────────────────────────────────────────────────── */}
       <section className="relative flex flex-col items-center overflow-hidden px-4 pb-24 pt-40 text-center">
+        {/* Animated gradient orb */}
+        <div className="pointer-events-none absolute top-20 left-1/2 -translate-x-1/2 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/10 to-cyan-500/15 blur-[100px] animate-glow-pulse" />
         <HoleBackground
           strokeColor="rgba(255,255,255,0.05)" // blur
           className="absolute inset-0 h-full w-full"
@@ -158,7 +160,7 @@ export default function LandingPage() {
 
       {/* BROWSER MOCKUP */}
       <section className="px-4 pb-32">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-white/8 bg-[#0f0f0f] shadow-2xl shadow-black/60">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-white/8 bg-[#0f0f0f] shadow-2xl shadow-black/60 animate-border-glow">
           <div className="flex items-center gap-2 border-b border-white/6 px-4 py-3">
             <div className="flex gap-1.5">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -284,10 +286,10 @@ export default function LandingPage() {
           {FEATURES.map(({ icon: Icon, label, desc }) => (
             <div
               key={label}
-              className="group bg-[#0a0a0a] p-7 hover:bg-[#0f0f0f]"
+              className="group bg-[#0a0a0a] p-7 hover:bg-[#0f0f0f] transition-all duration-300 hover:-translate-y-0.5"
             >
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-white/8 bg-white/4 group-hover:border-white/15 group-hover:bg-white/8">
-                <Icon className="h-4 w-4 text-white/60 group-hover:text-blue-400/70" />
+              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-white/8 bg-white/4 group-hover:border-blue-500/20 group-hover:bg-blue-500/8 transition-all duration-300 group-hover:scale-110">
+                <Icon className="h-4 w-4 text-white/60 group-hover:text-blue-400/70 transition-colors duration-300" />
               </div>
               <p className="mb-2 text-sm font-semibold">{label}</p>
               <p className="text-sm leading-relaxed text-white/40">{desc}</p>
@@ -314,7 +316,7 @@ export default function LandingPage() {
                 </div>
 
                 {i < STEPS.length - 1 && (
-                  <div className="mt-2 h-full w-px bg-white/6" />
+                  <div className="mt-2 h-full w-px bg-gradient-to-b from-blue-400/20 to-transparent" />
                 )}
               </div>
 
@@ -369,10 +371,10 @@ export default function LandingPage() {
               <div
                 key={plan.key}
                 className={cn(
-                  "relative flex flex-col rounded-2xl border p-7 transition-colors",
+                  "relative flex flex-col rounded-2xl border p-7 transition-all duration-300 hover:-translate-y-1",
                   plan.featured
-                    ? "border-blue-500/25 bg-blue-500/4"
-                    : "border-white/8 bg-[#0f0f0f]"
+                    ? "border-blue-500/25 bg-blue-500/4 shadow-lg shadow-blue-500/5"
+                    : "border-white/8 bg-[#0f0f0f] hover:border-white/12"
                 )}
               >
                 {/* Most popular pill */}
@@ -555,16 +557,18 @@ export default function LandingPage() {
         </SignInButton>
       </section>
 
-      <footer className="relative z-10 border-t border-white/7 py-12 mx-auto px-6 flex flex-col items-center justify-center gap-4 text-stone-400">
-        <p className="text-sm font-medium tracking-wide flex items-center gap-2">
-          Powered by
-          <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent font-bold">
-            Supabase
-          </span>
-          <span className="text-white/20">&times;</span>
-          <span className="bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent font-bold">
-            shadcn/ui
-          </span>
+      <footer className="relative z-10 border-t border-white/7 py-12 mx-auto px-6 flex flex-col items-center justify-center gap-6 text-stone-400">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <span className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-[11px] font-medium text-white/40">Next.js 16</span>
+          <span className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-[11px] font-medium text-white/40">React 19</span>
+          <span className="rounded-full border border-emerald-500/15 bg-emerald-500/5 px-3 py-1 text-[11px] font-medium text-emerald-400/60">Supabase</span>
+          <span className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-[11px] font-medium text-white/40">shadcn/ui</span>
+          <span className="rounded-full border border-violet-500/15 bg-violet-500/5 px-3 py-1 text-[11px] font-medium text-violet-400/60">Clerk</span>
+          <span className="rounded-full border border-orange-500/15 bg-orange-500/5 px-3 py-1 text-[11px] font-medium text-orange-400/60">Gemini AI</span>
+          <span className="rounded-full border border-cyan-500/15 bg-cyan-500/5 px-3 py-1 text-[11px] font-medium text-cyan-400/60">Arcjet</span>
+        </div>
+        <p className="text-xs text-white/15">
+          © {new Date().getFullYear()} Synthetix. Built with passion.
         </p>
       </footer>
     </main>
