@@ -42,6 +42,7 @@ export const PRICING_PLANS = [
     features: [
       "50 generations / month",
       "Image uploads",
+      "Version history",
       "Live preview",
       "Export to zip",
     ],
@@ -60,6 +61,7 @@ export const PRICING_PLANS = [
       "Live preview",
       "Export to zip",
       "Image uploads",
+      "Version history",
       "Access to Synthetix Pro Agent",
     ],
   },
