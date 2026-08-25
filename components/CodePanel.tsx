@@ -134,6 +134,12 @@ function SandpackInner({
   const [copiedUrl, setCopiedUrl] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
+  // ── Self-Healing state ────────────────────────────────────────────────────
+  const [isHealing, setIsHealing] = useState(false);
+  const [healCount, setHealCount] = useState(0);
+  const healTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const MAX_HEALS = 3;
+
   // Push file content updates into Sandpack without remounting.
   // This runs whenever fileData changes (e.g. after improve completes).
   // SandpackProvider key only changes when the file path set changes,
@@ -182,8 +188,79 @@ function SandpackInner({
   }, [listen]);
 
   useEffect(() => {
-    if (isGenerating) setPreviewError(null);
+    if (isGenerating) {
+      setPreviewError(null);
+      setHealCount(0);
+    }
   }, [isGenerating]);
+
+  // ── Auto-heal: debounce then silently fix ─────────────────────────────────
+  useEffect(() => {
+    if (!previewError || isGenerating || isImproving || isHealing) return;
+    if (healCount >= MAX_HEALS) return; // stop after 3 attempts
+
+    // Clear any pending timer
+    if (healTimerRef.current) clearTimeout(healTimerRef.current);
+
+    healTimerRef.current = setTimeout(async () => {
+      const currentFiles = fileData?.files;
+      if (!currentFiles) return;
+
+      setIsHealing(true);
+      setHealCount((c) => c + 1);
+
+      try {
+        const res = await fetch("/api/heal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: currentFiles, errorMessage: previewError }),
+        });
+
+        if (!res.ok || !res.body) throw new Error("Heal request failed");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const event = JSON.parse(line.slice(6)) as {
+                type: string;
+                files?: Record<string, { code: string }>;
+              };
+              if (event.type === "healed" && event.files) {
+                // Patch only the fixed files into Sandpack
+                for (const [path, { code }] of Object.entries(event.files)) {
+                  sandpack.updateFile(path, code);
+                }
+                setPreviewError(null);
+              }
+            } catch {
+              // ignore parse errors
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[self-heal] failed:", err);
+      } finally {
+        setIsHealing(false);
+      }
+    }, 1800); // 1.8s debounce — wait for error to settle
+
+    return () => {
+      if (healTimerRef.current) clearTimeout(healTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewError, isGenerating, isImproving]);
 
   const handleImproveSubmit = async () => {
     const trimmed = improveInput.trim();
@@ -543,17 +620,33 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
         </SandpackLayout>
       </div>
 
+      {/* ── Self-healing toast ───────────────────────────────────────────── */}
+      {isHealing && (
+        <div className="absolute inset-x-0 bottom-0 z-30 flex items-center gap-2.5 border-t border-blue-500/20 bg-[#0a0f1a]/95 px-4 py-2.5 backdrop-blur-sm">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />
+          <p className="text-xs font-medium text-blue-300/70">
+            Auto-fixing error… <span className="text-white/25">({healCount}/{MAX_HEALS})</span>
+          </p>
+          <div className="ml-auto flex h-5 items-center rounded-full bg-blue-500/10 px-2">
+            <span className="text-[10px] font-semibold text-blue-400/60">SELF-HEALING</span>
+          </div>
+        </div>
+      )}
+
       {/* Preview error banner — uses onFixError (Gemini), not onImprove (Cline) */}
       {previewError &&
         !isGenerating &&
         !isImproving &&
+        !isHealing &&
         activeTab === "preview" && (
           <div className="absolute inset-x-0 -bottom-3 z-20 border-t border-red-500/20 bg-red-950/99 p-4 pb-6">
             <div className="flex items-center gap-2.5">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400/70" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-red-400/80">
-                  Preview error
+                  {healCount >= MAX_HEALS
+                    ? `Auto-fix failed after ${MAX_HEALS} attempts`
+                    : "Preview error"}
                 </p>
                 <p className="break-all text-[11px] text-red-300/50">
                   {previewError}
