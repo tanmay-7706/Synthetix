@@ -159,10 +159,18 @@ export function ChatPanel({
         className="flex-1 overflow-y-auto px-3 py-4 [&::-webkit-scrollbar]:hidden"
       >
         {messages.length === 0 && !isGenerating && (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-center text-xs text-white/20">
-              Describe what you want to build…
-            </p>
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/10 border border-white/5">
+              <Sparkles className="h-5 w-5 text-blue-400/40" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-white/30">
+                What do you want to build?
+              </p>
+              <p className="mt-1 text-[11px] text-white/15">
+                Describe your idea or attach a design screenshot
+              </p>
+            </div>
           </div>
         )}
 
@@ -173,7 +181,7 @@ export function ChatPanel({
             const isLiveStream = isLast && isStreamingAssistant;
 
             return (
-              <div key={i}>
+              <div key={i} className="animate-[fadeInUp_0.3s_ease-out]">
                 {msg.role === "user" ? (
                   <div className="flex items-start justify-end gap-2">
                     <div className="max-w-[85%] space-y-1.5">
