@@ -1,15 +1,33 @@
 import Link from "next/link";
 import { UserButton, SignInButton, Show } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
-import { Zap, ArrowRight } from "lucide-react";
+import { Zap, ArrowRight, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkUser } from "@/lib/checkUser";
 import { PricingModal } from "@/components/PricingModal";
 import { PLANS } from "@/lib/constants";
+import { db } from "@/lib/prisma";
 import type { Plan } from "@/types/plans";
 
 export default async function Header() {
   const user = await checkUser();
+  const { userId: clerkId } = await auth();
+
+  // Check if the current user is admin
+  let isAdmin = false;
+  if (clerkId) {
+    const adminId = process.env.ADMIN_CLERK_ID;
+    if (adminId === "auto") {
+      const firstUser = await db.user.findFirst({
+        orderBy: { createdAt: "asc" },
+        select: { clerkId: true },
+      });
+      isAdmin = firstUser?.clerkId === clerkId;
+    } else {
+      isAdmin = clerkId === adminId;
+    }
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/7 backdrop-blur-md">
@@ -36,6 +54,16 @@ export default async function Header() {
             >
               Projects
             </Link>
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-1 text-[13px] font-medium text-white/40 transition-colors hover:text-white/80"
+              >
+                <BarChart3 className="h-3 w-3" />
+                Admin
+              </Link>
+            )}
 
             {user && (
               <PricingModal>
