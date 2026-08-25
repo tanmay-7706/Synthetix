@@ -20,6 +20,10 @@ import {
   Bot,
   Loader2,
   ArrowUp,
+  Rocket,
+  ExternalLink,
+  Check,
+  Copy,
 } from "lucide-react";
 import { RingLoader } from "react-spinners";
 import JSZip from "jszip";
@@ -125,6 +129,9 @@ function SandpackInner({
   const [isExporting, setIsExporting] = useState(false);
   const [improveInput, setImproveInput] = useState("");
   const [showImproveInput, setShowImproveInput] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deployedUrl, setDeployedUrl] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Push file content updates into Sandpack without remounting.
@@ -391,14 +398,85 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
             )}
             Download
           </Button>
+
+          {/* Deploy Live button */}
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              if (isDeploying || !fileData) return;
+              setIsDeploying(true);
+              setDeployedUrl(null);
+              try {
+                const res = await fetch("/api/deploy", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    files: fileData.files,
+                    dependencies: fileData.dependencies,
+                    title: appTitle,
+                  }),
+                });
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}));
+                  throw new Error((err as { message?: string }).message ?? "Deploy failed");
+                }
+                const data = await res.json() as { url: string };
+                setDeployedUrl(data.url);
+              } catch (err) {
+                console.error("Deploy failed:", err);
+              } finally {
+                setIsDeploying(false);
+              }
+            }}
+            disabled={isDeploying || !fileData}
+            className="gap-1.5"
+          >
+            {isDeploying ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : deployedUrl ? (
+              <Check className="h-3.5 w-3.5 text-emerald-400" />
+            ) : (
+              <Rocket className="h-3.5 w-3.5" />
+            )}
+            {isDeploying ? "Deploying…" : deployedUrl ? "Deployed" : "Deploy Live"}
+          </Button>
         </div>
+
+        {/* Deployed URL banner */}
+        {deployedUrl && (
+          <div className="flex items-center gap-2 border-l-2 border-emerald-500/40 bg-emerald-500/5 px-3 py-1.5">
+            <ExternalLink className="h-3 w-3 shrink-0 text-emerald-400/70" />
+            <a
+              href={deployedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate text-[11px] font-medium text-emerald-400/80 hover:text-emerald-300 transition-colors"
+            >
+              {deployedUrl}
+            </a>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(deployedUrl);
+                setCopiedUrl(true);
+                setTimeout(() => setCopiedUrl(false), 2000);
+              }}
+              className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-white/30 hover:bg-white/8 hover:text-white/60 transition-colors"
+            >
+              {copiedUrl ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Copy className="h-2.5 w-2.5" />}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Content area */}
       <div className="relative flex-1 overflow-hidden h-full">
         {(isGenerating || isImproving) && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-[#0a0a0a]/85 backdrop-blur-sm">
-            <RingLoader color="#60a5fa" size={64} speedMultiplier={0.8} />
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-[#0a0a0a]/90 backdrop-blur-sm">
+            {/* Gradient glow ring */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 via-violet-500/20 to-cyan-500/20 blur-xl animate-pulse" />
+              <RingLoader color="#60a5fa" size={64} speedMultiplier={0.8} />
+            </div>
             <div className="flex flex-col items-center gap-1.5">
               <p className="text-sm font-medium text-white/60">
                 {isImproving ? "Improving with Cline AI…" : currentStepLabel}
@@ -406,6 +484,18 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
               <p className="text-xs text-white/20">
                 This usually takes 10–20 seconds
               </p>
+              {/* Animated dots */}
+              <div className="mt-2 flex gap-1">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-1 w-1 rounded-full bg-blue-400/40"
+                    style={{
+                      animation: `fadeInUp 0.6s ease-in-out ${i * 0.15}s infinite alternate`,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}
