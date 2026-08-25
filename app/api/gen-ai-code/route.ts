@@ -85,12 +85,31 @@ RULES:
 9. Keep code clean, readable, and production-quality.
 10. If the user attaches an image, use it as a design reference and match the layout/style as closely as possible.`;
 
+// ─── Fetch image as base64 for Gemini vision ─────────────────────────────────
+
+async function fetchImageAsBase64(
+  url: string
+): Promise<{ mimeType: string; data: string } | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const mimeType = res.headers.get("content-type") ?? "image/png";
+    return { mimeType, data: buffer.toString("base64") };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Gemini contents builder ──────────────────────────────────────────────────
 
-function buildContents(messages: Message[], fileData: FileData | null) {
+async function buildContents(messages: Message[], fileData: FileData | null) {
   const trimmed = trimHistory(messages);
 
-  return trimmed.map((msg, idx) => {
+  const contents = [];
+
+  for (let idx = 0; idx < trimmed.length; idx++) {
+    const msg = trimmed[idx];
     const role = msg.role === "assistant" ? "model" : "user";
 
     if (msg.role === "user") {
@@ -98,8 +117,17 @@ function buildContents(messages: Message[], fileData: FileData | null) {
 
       let text = msg.content;
 
+      // Multi-modal: fetch image and pass as vision input
       if (msg.imageUrl) {
-        text = `[The user has attached an image. Use this URL directly in the generated app where relevant (as img src, background-image, etc.): ${msg.imageUrl}]\n\n${text}`;
+        const imageData = await fetchImageAsBase64(msg.imageUrl);
+        if (imageData) {
+          // Pass the actual image bytes to Gemini vision
+          parts.push({ inlineData: imageData });
+          text = `[The user has attached a design screenshot/wireframe. Analyze it carefully and replicate its layout, colors, typography, spacing, and visual style as closely as possible in your generated code. Also make the image available at this URL in the generated app where appropriate: ${msg.imageUrl}]\n\n${text}`;
+        } else {
+          // Fallback: just reference the URL
+          text = `[The user attached an image. Use this URL in the generated app: ${msg.imageUrl}]\n\n${text}`;
+        }
       }
 
       const isLast = idx === trimmed.length - 1;
@@ -110,11 +138,13 @@ function buildContents(messages: Message[], fileData: FileData | null) {
       }
 
       parts.push({ text });
-      return { role, parts };
+      contents.push({ role, parts });
+    } else {
+      contents.push({ role, parts: [{ text: msg.content }] });
     }
+  }
 
-    return { role, parts: [{ text: msg.content }] };
-  });
+  return contents;
 }
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -180,7 +210,7 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(chunk));
 
       try {
-        const contents = buildContents(messages, fileData);
+        const contents = await buildContents(messages, fileData);
 
         const geminiStream = await ai.models.generateContentStream({
           model: "gemini-3.5-flash",
