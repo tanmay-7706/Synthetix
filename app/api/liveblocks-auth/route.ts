@@ -2,11 +2,25 @@ import { auth } from "@clerk/nextjs/server";
 import { Liveblocks } from "@liveblocks/node";
 import { db } from "@/lib/prisma";
 
-const liveblocks = new Liveblocks({
-  secret: process.env.LIVEBLOCKS_SECRET_KEY!,
-});
+// Lazy init — avoids crashing during Vercel static page collection
+// when LIVEBLOCKS_SECRET_KEY is not yet set
+function getLiveblocks() {
+  const secret = process.env.LIVEBLOCKS_SECRET_KEY;
+  if (!secret || !secret.startsWith("sk_")) {
+    return null;
+  }
+  return new Liveblocks({ secret });
+}
 
 export async function POST(request: Request) {
+  const liveblocks = getLiveblocks();
+  if (!liveblocks) {
+    return Response.json(
+      { message: "Multiplayer not configured" },
+      { status: 503 }
+    );
+  }
+
   const { userId: clerkId } = await auth();
   if (!clerkId) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
