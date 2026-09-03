@@ -2,7 +2,7 @@ import Link from "next/link";
 import { UserButton, SignInButton, Show } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
-import { Zap, ArrowRight, BarChart3 } from "lucide-react";
+import { Zap, ArrowRight, BarChart3, PackageOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkUser } from "@/lib/checkUser";
 import { PricingModal } from "@/components/PricingModal";
@@ -53,6 +53,14 @@ export default async function Header() {
               className="text-[13px] font-medium text-white/40 transition-colors hover:text-white/80"
             >
               Projects
+            </Link>
+
+            <Link
+              href="/library"
+              className="flex items-center gap-1 text-[13px] font-medium text-white/40 transition-colors hover:text-white/80"
+            >
+              <PackageOpen className="h-3 w-3" />
+              Library
             </Link>
 
             {isAdmin && (

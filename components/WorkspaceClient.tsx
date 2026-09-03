@@ -6,6 +6,8 @@ import { ChatPanel } from "./ChatPanel";
 import { CodePanel } from "./CodePanel";
 import { MobileBlocker } from "./MobileBlocker";
 import { VersionHistory } from "./VersionHistory";
+import { CollaboratorAvatars, CollaboratorCursors } from "./CollaboratorCursors";
+import { RoomProvider } from "@/lib/liveblocks.config";
 import { MIN_CREDITS_TO_GENERATE } from "@/lib/constants";
 import { History } from "lucide-react";
 import { toast } from "sonner";
@@ -365,56 +367,143 @@ export function WorkspaceClient({
       </div>
 
       {/* Workspace — visible only on md+ screens */}
-      <div className="hidden md:flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a] relative">
-        <ChatPanel
-          isImproving={isImproving}
-          messages={messages}
-          isGenerating={isGenerating}
-          statusLog={statusLog}
-          credits={credits}
-          initialPrompt={initialPrompt}
-          onGenerate={handleGenerate}
-          onStop={handleStop}
-          userId={userId}
-          workspaceId={workspaceId}
-          appTitle={fileData?.title ?? workspace?.title ?? null}
-        />
-        <div className="w-px shrink-0 bg-white/6" />
-        <CodePanel
-          fileData={fileData}
-          isGenerating={isGenerating}
-          statusLog={statusLog}
-          onImprove={handleImprove}
-          onFixError={(error) =>
-            handleGenerate(
-              `There is an error in the preview:\n\n\`\`\`\n${error}\n\`\`\`\n\nPlease fix it.`
-            )
-          }
-          onFilePatch={handleFilePatch}
-          appTitle={fileData?.title ?? workspace?.title ?? null}
-          isImproving={isImproving}
-          isProUser={userPlan === "pro"}
-        />
+      <WorkspaceInner
+        workspaceId={workspaceId}
+        isImproving={isImproving}
+        messages={messages}
+        isGenerating={isGenerating}
+        statusLog={statusLog}
+        credits={credits}
+        initialPrompt={initialPrompt}
+        handleGenerate={handleGenerate}
+        handleStop={handleStop}
+        userId={userId}
+        fileData={fileData}
+        workspace={workspace}
+        handleImprove={handleImprove}
+        handleFilePatch={handleFilePatch}
+        userPlan={userPlan}
+        isHistoryOpen={isHistoryOpen}
+        setIsHistoryOpen={setIsHistoryOpen}
+        handleRestore={handleRestore}
+      />
+    </>
+  );
+}
 
-        {/* History toggle button */}
+// ─── Inner component (extracted so RoomProvider can wrap it) ──────────────────
+
+function WorkspaceInner({
+  workspaceId,
+  isImproving,
+  messages,
+  isGenerating,
+  statusLog,
+  credits,
+  initialPrompt,
+  handleGenerate,
+  handleStop,
+  userId,
+  fileData,
+  workspace,
+  handleImprove,
+  handleFilePatch,
+  userPlan,
+  isHistoryOpen,
+  setIsHistoryOpen,
+  handleRestore,
+}: {
+  workspaceId: string | null;
+  isImproving: boolean;
+  messages: Message[];
+  isGenerating: boolean;
+  statusLog: StatusStep[];
+  credits: number;
+  initialPrompt: string | null;
+  handleGenerate: (prompt: string, imageUrl?: string) => Promise<void>;
+  handleStop: () => void;
+  userId: string;
+  fileData: FileData | null;
+  workspace: WorkspaceData | null;
+  handleImprove: (request: string) => Promise<void>;
+  handleFilePatch: (patches: FileData) => void;
+  userPlan: string;
+  isHistoryOpen: boolean;
+  setIsHistoryOpen: (open: boolean) => void;
+  handleRestore: (fd: FileData, msgs: Message[]) => void;
+}) {
+  const content = (
+    <div className="hidden md:flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a] relative">
+      {/* Collaborator cursors overlay */}
+      {workspaceId && (
+        <CollaboratorCursors />
+      )}
+
+      <ChatPanel
+        isImproving={isImproving}
+        messages={messages}
+        isGenerating={isGenerating}
+        statusLog={statusLog}
+        credits={credits}
+        initialPrompt={initialPrompt}
+        onGenerate={handleGenerate}
+        onStop={handleStop}
+        userId={userId}
+        workspaceId={workspaceId}
+        appTitle={fileData?.title ?? workspace?.title ?? null}
+      />
+      <div className="w-px shrink-0 bg-white/6" />
+      <CodePanel
+        fileData={fileData}
+        isGenerating={isGenerating}
+        statusLog={statusLog}
+        onImprove={handleImprove}
+        onFixError={(error) =>
+          handleGenerate(
+            `There is an error in the preview:\n\n\`\`\`\n${error}\n\`\`\`\n\nPlease fix it.`
+          )
+        }
+        onFilePatch={handleFilePatch}
+        appTitle={fileData?.title ?? workspace?.title ?? null}
+        isImproving={isImproving}
+        isProUser={userPlan === "pro"}
+      />
+
+      {/* History toggle + Collaborator avatars */}
+      <div className="absolute right-4 bottom-4 z-30 flex items-center gap-2">
+        {workspaceId && <CollaboratorAvatars />}
         {workspaceId && (
           <button
             onClick={() => setIsHistoryOpen(true)}
-            className="absolute right-4 bottom-4 z-30 flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-[#111]/90 px-3.5 text-xs font-medium text-white/50 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-[#1a1a1a] hover:text-white/80 hover:shadow-lg hover:shadow-blue-500/5 active:scale-95"
+            className="flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-[#111]/90 px-3.5 text-xs font-medium text-white/50 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-[#1a1a1a] hover:text-white/80 hover:shadow-lg hover:shadow-blue-500/5 active:scale-95"
           >
             <History className="h-3.5 w-3.5" />
             History
           </button>
         )}
-
-        {/* Version History Panel */}
-        <VersionHistory
-          workspaceId={workspaceId}
-          isOpen={isHistoryOpen}
-          onClose={() => setIsHistoryOpen(false)}
-          onRestore={handleRestore}
-        />
       </div>
-    </>
+
+      {/* Version History Panel */}
+      <VersionHistory
+        workspaceId={workspaceId}
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onRestore={handleRestore}
+      />
+    </div>
   );
+
+  // Wrap in RoomProvider only when we have a workspace ID
+  if (workspaceId) {
+    return (
+      <RoomProvider
+        id={`workspace-${workspaceId}`}
+        initialPresence={{ cursor: null, isTyping: false, name: "", color: "" }}
+      >
+        {content}
+      </RoomProvider>
+    );
+  }
+
+  return content;
 }
