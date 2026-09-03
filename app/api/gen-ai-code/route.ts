@@ -156,11 +156,12 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { workspaceId, userId, messages, fileData } = body as {
+  const { workspaceId, userId, messages, fileData, frameworkSuffix } = body as {
     workspaceId: string | null;
     userId: string;
     messages: Message[];
     fileData: FileData | null;
+    frameworkSuffix?: string;
   };
 
   if (!messages?.length) {
@@ -216,7 +217,9 @@ export async function POST(request: NextRequest) {
           model: "gemini-3.5-flash",
           contents,
           config: {
-            systemInstruction: SYSTEM_PROMPT,
+            systemInstruction: frameworkSuffix
+              ? SYSTEM_PROMPT + frameworkSuffix
+              : SYSTEM_PROMPT,
             temperature: 0.7,
             responseMimeType: "application/json",
             thinkingConfig: {

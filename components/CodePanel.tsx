@@ -102,6 +102,8 @@ interface CodePanelProps {
   appTitle: string | null;
   isImproving: boolean;
   isProUser: boolean;
+  frameworkConfig: FrameworkConfig;
+  onFrameworkChange: (cfg: FrameworkConfig) => void;
 }
 
 // ─── SandpackInner ────────────────────────────────────────────────────────────
@@ -781,9 +783,10 @@ export function CodePanel({
   appTitle,
   isImproving,
   isProUser,
+  frameworkConfig,
+  onFrameworkChange,
 }: CodePanelProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("preview");
-  const [frameworkConfig, setFrameworkConfig] = useState<FrameworkConfig>(DEFAULT_CONFIG);
 
   useEffect(() => {
     if (fileData) setActiveTab("preview");
@@ -831,7 +834,7 @@ export function CodePanel({
           isImproving={isImproving}
           isProUser={isProUser}
           frameworkConfig={frameworkConfig}
-          onFrameworkChange={setFrameworkConfig}
+          onFrameworkChange={onFrameworkChange}
         />
       </SandpackProvider>
     </div>

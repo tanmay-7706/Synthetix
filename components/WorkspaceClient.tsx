@@ -11,6 +11,11 @@ import { RoomProvider } from "@/lib/liveblocks.config";
 import { MIN_CREDITS_TO_GENERATE } from "@/lib/constants";
 import { History } from "lucide-react";
 import { toast } from "sonner";
+import {
+  type FrameworkConfig,
+  DEFAULT_CONFIG,
+  resolveConfig,
+} from "@/lib/framework-configs";
 import type {
   Message,
   FileData,
@@ -69,6 +74,7 @@ export function WorkspaceClient({
   const [statusLog, setStatusLog] = useState<StatusStep[]>([]);
   const [isImproving, setIsImproving] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [frameworkConfig, setFrameworkConfig] = useState<FrameworkConfig>(DEFAULT_CONFIG);
 
   // AbortController refs — used to cancel in-flight streams
   const generateAbortRef = useRef<AbortController | null>(null);
@@ -143,6 +149,7 @@ export function WorkspaceClient({
             userId,
             messages: conversationHistory,
             fileData: fileDataRef.current,
+            frameworkSuffix: resolveConfig(frameworkConfig).promptSuffix,
           }),
         });
 
@@ -386,6 +393,8 @@ export function WorkspaceClient({
         isHistoryOpen={isHistoryOpen}
         setIsHistoryOpen={setIsHistoryOpen}
         handleRestore={handleRestore}
+        frameworkConfig={frameworkConfig}
+        onFrameworkChange={setFrameworkConfig}
       />
     </>
   );
@@ -412,6 +421,8 @@ function WorkspaceInner({
   isHistoryOpen,
   setIsHistoryOpen,
   handleRestore,
+  frameworkConfig,
+  onFrameworkChange,
 }: {
   workspaceId: string | null;
   isImproving: boolean;
@@ -431,6 +442,8 @@ function WorkspaceInner({
   isHistoryOpen: boolean;
   setIsHistoryOpen: (open: boolean) => void;
   handleRestore: (fd: FileData, msgs: Message[]) => void;
+  frameworkConfig: FrameworkConfig;
+  onFrameworkChange: (cfg: FrameworkConfig) => void;
 }) {
   const content = (
     <div className="hidden md:flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a] relative">
@@ -467,6 +480,8 @@ function WorkspaceInner({
         appTitle={fileData?.title ?? workspace?.title ?? null}
         isImproving={isImproving}
         isProUser={userPlan === "pro"}
+        frameworkConfig={frameworkConfig}
+        onFrameworkChange={onFrameworkChange}
       />
 
       {/* History toggle + Collaborator avatars */}
