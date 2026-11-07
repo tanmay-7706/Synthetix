@@ -17,9 +17,9 @@ export interface ResolvedConfig {
 }
 
 const FRAMEWORK_LABELS: Record<FrameworkKey, string> = {
-  cra: "Create React App",
-  "vite-react": "Vite + React",
-  vue: "Vue 3",
+  cra: "React (CRA)",
+  "vite-react": "React (Vite)",
+  vue: "Vue 3 (Vite)",
 };
 
 const UI_LABELS: Record<UILibKey, string> = {

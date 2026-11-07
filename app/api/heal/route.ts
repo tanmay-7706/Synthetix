@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { healLimiter } from "@/lib/arcjet";
+import { db } from "@/lib/prisma";
 import type { FileData } from "@/types/workspace";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
@@ -15,7 +17,36 @@ export async function POST(request: NextRequest) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json() as {
+  // Rate limiting check
+  const decision = await healLimiter.protect(request, {
+    requested: 1,
+    userId: clerkId,
+  });
+  if (decision.isDenied()) {
+    return Response.json(
+      { message: "Too many heal requests. Please slow down." },
+      { status: 429 }
+    );
+  }
+
+  // Credit and authorization check
+  const user = await db.user.findUnique({
+    where: { clerkId },
+    select: { id: true, credits: true },
+  });
+
+  if (!user) {
+    return Response.json({ message: "User not found" }, { status: 404 });
+  }
+
+  if (user.credits < 1) {
+    return Response.json(
+      { message: "Insufficient credits for self-healing" },
+      { status: 402 }
+    );
+  }
+
+  const body = (await request.json()) as {
     files: FileData["files"];
     errorMessage: string;
   };
@@ -23,7 +54,10 @@ export async function POST(request: NextRequest) {
   const { files, errorMessage } = body;
 
   if (!files || !errorMessage) {
-    return Response.json({ message: "Missing files or error" }, { status: 400 });
+    return Response.json(
+      { message: "Missing files or error" },
+      { status: 400 }
+    );
   }
 
   const encoder = new TextEncoder();
@@ -82,6 +116,16 @@ Your task:
           enqueue(sseEvent("error", { message: "Invalid heal response" }));
           controller.close();
           return;
+        }
+
+        // Deduct 1 credit for successful self-healing
+        try {
+          await db.user.update({
+            where: { id: user.id },
+            data: { credits: { decrement: 1 } },
+          });
+        } catch (dbErr) {
+          console.warn("[heal] could not decrement credits:", dbErr);
         }
 
         enqueue(sseEvent("healed", { files: parsed.files }));

@@ -33,9 +33,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PricingModal } from "@/components/PricingModal";
 import { FrameworkModal } from "@/components/FrameworkModal";
+import { buildProjectBundle } from "@/lib/project-export";
 import {
   type FrameworkConfig,
-  DEFAULT_CONFIG,
   resolveConfig,
 } from "@/lib/framework-configs";
 import type { FileData, StatusStep } from "@/types/workspace";
@@ -305,70 +305,18 @@ function SandpackInner({
         ...(fileData?.dependencies ?? {}),
       };
 
+      const bundle = buildProjectBundle({
+        framework: frameworkConfig.framework,
+        uiLib: frameworkConfig.uiLib,
+        files: filesToZip,
+        dependencies,
+        title: appTitle ?? "Synthetix App",
+      });
+
       const zip = new JSZip();
-
-      const packageJson = {
-        name: "synthetix-app",
-        version: "1.0.0",
-        private: true,
-        dependencies: {
-          react: "^18.2.0",
-          "react-dom": "^18.2.0",
-          "react-scripts": "5.0.1",
-          ...dependencies,
-        },
-        scripts: {
-          start: "react-scripts start",
-          build: "react-scripts build",
-        },
-        browserslist: {
-          production: [">0.2%", "not dead", "not op_mini all"],
-          development: ["last 1 chrome version"],
-        },
-      };
-      zip.file("package.json", JSON.stringify(packageJson, null, 2));
-
-      zip.file(
-        "public/index.html",
-        `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Synthetix App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>`
-      );
-
-      for (const [filePath, fileObj] of Object.entries(filesToZip)) {
-        const code =
-          typeof fileObj === "object" && fileObj !== null && "code" in fileObj
-            ? (fileObj as { code: string }).code
-            : "";
-        const zipPath = filePath.startsWith("/")
-          ? `src${filePath}`
-          : `src/${filePath}`;
-        zip.file(zipPath, code);
+      for (const entry of bundle.files) {
+        zip.file(entry.path, entry.content);
       }
-
-      zip.file(
-        "src/index.js",
-        `import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<React.StrictMode><App /></React.StrictMode>);`
-      );
-
-      zip.file(
-        "README.md",
-        `# Synthetix App\n\nGenerated with [Synthetix](https://synthetix.app).\n\n## Getting started\n\n\`\`\`bash\nnpm install\nnpm start\n\`\`\``
-      );
 
       const blob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(blob);
@@ -507,23 +455,39 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
               setIsDeploying(true);
               setDeployedUrl(null);
               try {
+                const filesToDeploy =
+                  Object.keys(sandpack.files).length > 0
+                    ? sandpack.files
+                    : fileData.files;
+
                 const res = await fetch("/api/deploy", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    files: fileData.files,
-                    dependencies: fileData.dependencies,
+                    files: filesToDeploy,
+                    dependencies: {
+                      ...BASE_DEPENDENCIES,
+                      ...(fileData.dependencies ?? {}),
+                    },
                     title: appTitle,
+                    framework: frameworkConfig.framework,
+                    uiLib: frameworkConfig.uiLib,
                   }),
                 });
                 if (!res.ok) {
-                  const err = await res.json().catch(() => ({}));
-                  throw new Error((err as { message?: string }).message ?? "Deploy failed");
+                  const err = (await res.json().catch(() => ({}))) as {
+                    message?: string;
+                  };
+                  throw new Error(err.message ?? "Deploy failed");
                 }
-                const data = await res.json() as { url: string };
+                const data = (await res.json()) as { url: string };
                 setDeployedUrl(data.url);
+                toast.success("App deployed successfully!");
               } catch (err) {
                 console.error("Deploy failed:", err);
+                toast.error(
+                  err instanceof Error ? err.message : "Deployment failed"
+                );
               } finally {
                 setIsDeploying(false);
               }
@@ -556,32 +520,32 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
             Save
           </Button>
         </div>
-
-        {/* Deployed URL banner */}
-        {deployedUrl && (
-          <div className="flex items-center gap-2 border-l-2 border-emerald-500/40 bg-emerald-500/5 px-3 py-1.5">
-            <ExternalLink className="h-3 w-3 shrink-0 text-emerald-400/70" />
-            <a
-              href={deployedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="truncate text-[11px] font-medium text-emerald-400/80 hover:text-emerald-300 transition-colors"
-            >
-              {deployedUrl}
-            </a>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(deployedUrl);
-                setCopiedUrl(true);
-                setTimeout(() => setCopiedUrl(false), 2000);
-              }}
-              className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-white/30 hover:bg-white/8 hover:text-white/60 transition-colors"
-            >
-              {copiedUrl ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Copy className="h-2.5 w-2.5" />}
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* Deployed URL banner — outside toolbar so it gets its own row */}
+      {deployedUrl && (
+        <div className="flex items-center gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-4 py-2">
+          <ExternalLink className="h-3 w-3 shrink-0 text-emerald-400/70" />
+          <a
+            href={deployedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate text-[11px] font-medium text-emerald-400/80 hover:text-emerald-300 transition-colors"
+          >
+            {deployedUrl}
+          </a>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(deployedUrl);
+              setCopiedUrl(true);
+              setTimeout(() => setCopiedUrl(false), 2000);
+            }}
+            className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-white/30 hover:bg-white/8 hover:text-white/60 transition-colors"
+          >
+            {copiedUrl ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Copy className="h-2.5 w-2.5" />}
+          </button>
+        </div>
+      )}
 
       {/* Content area */}
       <div className="relative flex-1 overflow-hidden h-full">
@@ -629,7 +593,7 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
             className="mt-0 h-full w-full"
           >
             <SandpackPreview
-              style={{ height: "89%" }}
+              style={{ height: "100%" }}
               showOpenInCodeSandbox={false}
             />
           </TabsContent>
@@ -641,13 +605,13 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
           >
             <SandpackFileExplorer
               style={{
-                height: "90%",
+                height: "100%",
                 width: "180px",
                 borderRight: "0.5px solid rgba(255,255,255,0.08)",
               }}
             />
             <SandpackCodeEditor
-              style={{ height: "90%", flex: 1 }}
+              style={{ height: "100%", flex: 1 }}
               showTabs
               showLineNumbers
               showInlineErrors
@@ -677,7 +641,7 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
         !isImproving &&
         !isHealing &&
         activeTab === "preview" && (
-          <div className="absolute inset-x-0 -bottom-3 z-20 border-t border-red-500/20 bg-red-950/99 p-4 pb-6">
+          <div className="absolute inset-x-0 bottom-0 z-20 border-t border-red-500/20 bg-red-950/95 p-4">
             <div className="flex items-center gap-2.5">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400/70" />
               <div className="min-w-0 flex-1">
@@ -779,7 +743,6 @@ export function CodePanel({
   statusLog,
   onImprove,
   onFixError,
-  onFilePatch: _onFilePatch,
   appTitle,
   isImproving,
   isProUser,
