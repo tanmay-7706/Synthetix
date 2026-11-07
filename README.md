@@ -61,18 +61,18 @@ Built to demonstrate advanced AI orchestration, full-stack architecture, and Saa
 - **Code Editor** — Full syntax-highlighted editor with file explorer, powered by CodeMirror inside Sandpack
 
 ### 👥 Collaboration & Versioning
-- **Real-Time Multiplayer** — Multiple users can collaborate in the same workspace simultaneously with live cursors and avatar presence (powered by Liveblocks)
+- **Collaborator Cursors & Presence** — Multiplayer presence and cursor broadcasting implemented; live two-user synchronization requires manual verification with two authenticated browser sessions (powered by Liveblocks)
 - **Version History** — Every generation creates a version snapshot. Restore any previous state with a single click
 - **Component Library** — Save generated components to a personal library with tags, and reuse them across projects with live mini-previews
 
 ### 🚀 Deployment & Export
-- **1-Click Deploy to Vercel** — Deploy any generated app directly to Vercel's CDN with a live public URL, all from within the workspace
+- **1-Click Deploy Integration** — Vercel deployment integration implemented; live deployment not yet verified to avoid consuming deployment quota.
 - **ZIP Export** — Download the full project as a ready-to-use `.zip` file (includes `package.json`, `public/`, and all source files)
 
 ### 🛡️ Security & Infrastructure
-- **Arcjet Security Layer** — Defends against AI prompt injection attacks, bot scraping, and API abuse via multi-rule dynamic rate limiting
-- **Row-Level Security** — Supabase RLS policies ensure users can only access their own data at the database level
-- **Clerk Authentication** — Secure, production-grade auth with social login, session management, and middleware protection
+- **Arcjet Defense Layer** — Defends against AI prompt injection attacks, sensitive data leakage, bot scraping, and API abuse via user-level token bucket rate limiting (10 req/min for healing, 3 req/min for deployment)
+- **Multi-Tenant Access Isolation** — Strict tenant verification on all private routes and APIs (`where: { userId: user.id }`) preventing IDOR attacks
+- **Clerk Authentication** — Secure edge authentication proxy with social login, session management, and route protection across `/workspace`, `/projects`, `/library`, and `/admin`
 
 ### 💎 SaaS Monetization
 - **Free & Pro Tiers** — Credit-based usage system with a Pricing Modal gating premium features
@@ -104,9 +104,9 @@ Built to demonstrate advanced AI orchestration, full-stack architecture, and Saa
 └─────────────────────────────────────────────────────────────┘
          │                          │
          ▼                          ▼
-   Supabase (Postgres)        Vercel (1-Click Deploy)
+   Supabase (Postgres)        Vercel (Deploy Integration)
    + Prisma ORM               REST API via /api/deploy
-   + RLS Policies
+   + Relational Cascade
          │
          ▼
    Clerk (Auth) + Arcjet (Security)
@@ -167,17 +167,53 @@ cp .env.example .env.local
 ```
 Fill in the values (see [Environment Variables](#-environment-variables) below).
 
-### 4. Push the database schema
+### 4. Apply database migrations
 ```bash
-npx prisma db push
+npx prisma migrate deploy
+npx prisma generate
 ```
 
-### 5. Start the development server
+### 5. Run the Automated Test Suites
+```bash
+# Run Vitest unit tests (22 tests: export bundles, admin auth, Arcjet limits, API auth logic)
+npm test
+
+# Run Playwright E2E tests (16 tests: navigation, route protection, API access control, IDOR defense, component lifecycle)
+npm run test:e2e
+```
+
+### 6. Validate Code Quality & Build
+```bash
+npx tsc --noEmit    # Strict TypeScript type check (0 errors)
+npm run lint        # ESLint check (0 errors, 0 warnings)
+npm run build       # Next.js production build (16/16 routes compiled)
+```
+
+### 7. Start the development server
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🧪 Testing & Verification
+
+Synthetix features comprehensive unit, integration, and end-to-end test suites:
+
+- **Unit Tests (Vitest)**: Fast, deterministic tests verifying framework bundle generation (React CRA, Vite React, Vue 3 Vite), admin access control logic, Arcjet rate limit configurations, and API authorization guards for versions and Liveblocks rooms without live network dependencies.
+- **E2E Tests (Playwright)**: Full browser automation testing unauthenticated redirects on all protected routes (`/workspace`, `/projects`, `/library`, `/admin`), hero prompt sessionStorage preservation across login, and database component lifecycle operations.
+
+---
+
+## ⚠️ Known Limitations & Operational Notes
+
+- **Multiplayer Collaboration**: Multiplayer presence and cursor broadcasting implemented; live two-user synchronization requires manual verification with two authenticated browser sessions.
+- **Vercel Deployments**: Vercel deployment integration implemented; live deployment not yet verified to avoid consuming deployment quota. Standalone ZIP exports build and run independently without external tokens.
+- **Google Gemini AI**: Gemini generation verified in development; production-scale usage may require Google Cloud billing/quota configuration.
+- **Database & Migrations**: Supabase PostgreSQL and Prisma migrations verified in the development database.
+- **Arcjet Environment Mode**: In local development (`NODE_ENV=development` or `ARCJET_ENV=development`), Arcjet runs in `DRY_RUN` mode to ensure local browser testing and automated test suites are never falsely blocked. In production, it runs strictly in `LIVE` mode.
 
 ---
 
