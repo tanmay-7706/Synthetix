@@ -23,6 +23,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   workspaces Workspace[]
+  components Component[]
 }
 
 model Workspace {
@@ -55,6 +56,7 @@ model Version {
 model Component {
   id        String   @id @default(cuid())
   userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   tags      String[] @default([])
   code      String
