@@ -245,11 +245,11 @@ export function ChatPanel({
                     />
                     <div className="min-w-0 rounded-2xl rounded-tl-sm bg-white/5 px-3.5 py-2.5">
                       {isLiveStream && !msg.content ? (
-                        // Empty placeholder — show Cline thinking indicator
+                        // Empty placeholder — show AI thinking indicator
                         <div className="flex items-center gap-2">
                           <Wand2 className="h-3 w-3 shrink-0 text-blue-400/60 animate-pulse" />
                           <span className="text-[12px] text-white/30 animate-pulse">
-                            Cline is thinking…
+                            AI is thinking…
                           </span>
                         </div>
                       ) : isLiveStream && msg.content ? (
@@ -382,11 +382,12 @@ export function ChatPanel({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isGenerating || isImproving || noCredits}
+            aria-label="Ask AI to modify application"
             placeholder={
               noCredits
                 ? "Upgrade to keep building…"
                 : isImproving
-                ? "Cline is improving your app…"
+                ? "AI is improving your app…"
                 : isGenerating
                 ? "Generating…"
                 : "Ask AI to modify…"
@@ -402,6 +403,7 @@ export function ChatPanel({
               size="icon"
               onClick={() => fileRef.current?.click()}
               disabled={isGenerating || isImproving || isUploading || noCredits}
+              aria-label="Attach wireframe or design screenshot"
               className="h-7 w-7 rounded-lg text-white/25 hover:bg-white/6 hover:text-white/50 disabled:opacity-40"
             >
               {isUploading ? (
@@ -424,6 +426,7 @@ export function ChatPanel({
               <Button
                 size="icon"
                 onClick={onStop}
+                aria-label="Stop generation"
                 className="h-7 w-7 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 hover:text-white active:scale-95 transition-all"
               >
                 <Square className="h-3 w-3 fill-current" />
@@ -433,6 +436,7 @@ export function ChatPanel({
                 size="icon"
                 onClick={handleSubmit}
                 disabled={!canSubmit}
+                aria-label="Send prompt"
                 className={cn(
                   "h-7 w-7 rounded-lg transition-all",
                   canSubmit

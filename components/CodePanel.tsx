@@ -558,7 +558,7 @@ function SandpackInner({
             </div>
             <div className="flex flex-col items-center gap-1.5">
               <p className="text-sm font-medium text-white/60">
-                {isImproving ? "Improving with Cline AI…" : currentStepLabel}
+                {isImproving ? "Improving with AI Agent…" : currentStepLabel}
               </p>
               <p className="text-xs text-white/20">
                 This usually takes 10–20 seconds
@@ -635,7 +635,7 @@ function SandpackInner({
         </div>
       )}
 
-      {/* Preview error banner — uses onFixError (Gemini), not onImprove (Cline) */}
+      {/* Preview error banner — uses onFixError (Gemini self-heal), not onImprove (Pro agent) */}
       {previewError &&
         !isGenerating &&
         !isImproving &&

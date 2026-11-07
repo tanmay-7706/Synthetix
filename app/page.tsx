@@ -129,6 +129,7 @@ export default function LandingPage() {
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
+              aria-label="Describe what you want to build"
               placeholder={PLACEHOLDERS[placeholderIndex]}
               rows={1}
               className="w-full resize-none bg-transparent px-5 pb-4 pt-5 text-sm placeholder:text-white/20 focus:outline-none sm:text-base"
@@ -143,6 +144,7 @@ export default function LandingPage() {
               <Button
                 onClick={handleSubmit}
                 disabled={!prompt.trim()}
+                aria-label="Generate application"
                 className="h-8 rounded-full px-5 font-semibold"
                 variant={prompt.trim() ? "default" : "secondary"}
               >

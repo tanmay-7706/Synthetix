@@ -27,6 +27,7 @@ export default async function Header() {
             alt="Synthetix"
             width={300}
             height={100}
+            priority
             className="h-10 w-auto rounded-md"
           />
         </Link>

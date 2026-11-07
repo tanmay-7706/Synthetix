@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
       // ── Tool 2: done_improving ───────────────────────────────────────────
       // Agent calls this when all files are updated.
-      // lifecycle.completesRun: true tells the Cline SDK loop to stop
+      // lifecycle.completesRun: true tells the SDK loop to stop
       // immediately after this tool runs instead of continuing iterations.
 
       const doneImprovingTool = createTool({
@@ -179,7 +179,7 @@ RULES:
         });
 
         // ── Run the agent ─────────────────────────────────────────────────
-        enqueue(sseEvent("status", { message: "Cline agent starting…" }));
+        enqueue(sseEvent("status", { message: "AI agent starting…" }));
 
         const result = await agent.run(userRequest);
 
