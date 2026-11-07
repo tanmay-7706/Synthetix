@@ -5,6 +5,7 @@ import { db } from "@/lib/prisma";
 import { CREDIT_COST_PER_GENERATION } from "@/lib/constants";
 import type { Message, FileData } from "@/types/workspace";
 import { aj } from "@/lib/arcjet";
+import { safeParseAiJson } from "@/lib/json-recovery";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -264,8 +265,9 @@ export async function POST(request: NextRequest) {
         };
 
         try {
-          parsed = JSON.parse(accumulated);
-        } catch {
+          parsed = safeParseAiJson(accumulated);
+        } catch (err) {
+          console.error("[gen-ai-code] Failed to parse AI JSON:", err);
           enqueue(
             sseEvent("error", {
               message: "AI returned invalid JSON. Please try again.",
