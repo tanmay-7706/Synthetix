@@ -41,6 +41,23 @@ export async function POST(request: Request) {
     return Response.json({ message: "User not found" }, { status: 404 });
   }
 
+  // Verify that the user owns the requested workspace room
+  const workspaceId = room.startsWith("workspace-")
+    ? room.replace("workspace-", "")
+    : room;
+
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId, userId: user.id },
+    select: { id: true },
+  });
+
+  if (!workspace) {
+    return Response.json(
+      { message: "Access denied to this workspace" },
+      { status: 403 }
+    );
+  }
+
   // Create a Liveblocks session for this user
   const session = liveblocks.prepareSession(`user-${user.id}`, {
     userInfo: {

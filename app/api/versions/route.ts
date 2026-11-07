@@ -18,6 +18,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Verify user existence and workspace ownership
+  const user = await db.user.findUnique({
+    where: { clerkId },
+    select: { id: true },
+  });
+  if (!user) {
+    return Response.json({ message: "User not found" }, { status: 404 });
+  }
+
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId, userId: user.id },
+    select: { id: true },
+  });
+  if (!workspace) {
+    return Response.json({ message: "Workspace not found" }, { status: 404 });
+  }
+
   const versions = await db.version.findMany({
     where: { workspaceId },
     orderBy: { createdAt: "desc" },

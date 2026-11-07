@@ -5,6 +5,8 @@ import { NextResponse } from "next/server";
 const isProtectedRoute = createRouteMatcher([
   "/workspace(.*)",
   "/projects(.*)",
+  "/library(.*)",
+  "/admin(.*)",
 ]);
 
 // ─── Global Arcjet client ─────────────────────────────────────────────────────
@@ -12,12 +14,16 @@ const isProtectedRoute = createRouteMatcher([
 // engines and link previews so the landing page gets indexed and
 // Slack/Twitter unfurls work.
 
+const isDev =
+  process.env.NODE_ENV === "development" ||
+  process.env.ARCJET_ENV === "development";
+
 const aj = arcjet({
   key: process.env.ARCJET_KEY!,
   rules: [
-    shield({ mode: "LIVE" }),
+    shield({ mode: isDev ? "DRY_RUN" : "LIVE" }),
     detectBot({
-      mode: "LIVE",
+      mode: isDev ? "DRY_RUN" : "LIVE",
       allow: ["CATEGORY:SEARCH_ENGINE", "CATEGORY:PREVIEW"],
     }),
   ],

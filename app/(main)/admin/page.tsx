@@ -1,21 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/prisma";
+import { isAdmin } from "@/lib/admin";
 import { AdminDashboard } from "@/components/AdminDashboard";
-
-async function isAdmin(clerkId: string): Promise<boolean> {
-  const adminId = process.env.ADMIN_CLERK_ID;
-
-  if (adminId === "auto") {
-    const firstUser = await db.user.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { clerkId: true },
-    });
-    return firstUser?.clerkId === clerkId;
-  }
-
-  return clerkId === adminId;
-}
 
 export default async function AdminPage() {
   const { userId: clerkId } = await auth();

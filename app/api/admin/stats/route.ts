@@ -1,23 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma";
+import { isAdmin } from "@/lib/admin";
 
 // ─── Admin Stats API ──────────────────────────────────────────────────────────
 // Protected: only allows the admin Clerk user.
-
-async function isAdmin(clerkId: string): Promise<boolean> {
-  const adminId = process.env.ADMIN_CLERK_ID;
-
-  // "auto" mode: the first user in the database is the admin
-  if (adminId === "auto") {
-    const firstUser = await db.user.findFirst({
-      orderBy: { createdAt: "asc" },
-      select: { clerkId: true },
-    });
-    return firstUser?.clerkId === clerkId;
-  }
-
-  return clerkId === adminId;
-}
 
 export async function GET() {
   const { userId: clerkId } = await auth();
