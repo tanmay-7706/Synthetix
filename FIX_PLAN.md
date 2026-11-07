@@ -195,3 +195,15 @@ This document details the completed and proposed fixes for issues identified in 
 - **Status**: **RESOLVED**
 - **Action**: Simplified `Lora` font declaration to avoid array style/weight queries that collided with Next.js 16 font replacers during Turbopack compilation.
 - **Verification**: `npm run build` compiles 16/16 routes in Turbopack with 0 errors.
+
+### Fix 5.4: Vercel CI Peer Dependency Installation Mismatch
+- **Target File**: `.npmrc`
+- **Status**: **RESOLVED**
+- **Action**: Created `.npmrc` with `legacy-peer-deps=true` to resolve npm peer dependency resolution conflicts (`ERESOLVE`) between `@types/node` and `vitest` during Vercel automated CI deployments.
+- **Verification**: Vercel deployment builds succeed cleanly without npm install errors.
+
+### Fix 5.5: Gemini Streaming Output JSON Recovery Pipeline
+- **Target Files**: `lib/json-recovery.ts`, `app/api/gen-ai-code/route.ts`, `tests/unit/json-recovery.test.ts`
+- **Status**: **RESOLVED**
+- **Action**: Implemented a 4-tier progressive fallback recovery pipeline (`safeParseAiJson`) that strips Markdown code fences, extracts outer JSON boundaries, escapes raw newlines/control characters in JSON string values, and extracts structural fields when Gemini emits unescaped double quotes in JSX attributes. Added 12 comprehensive unit tests.
+- **Verification**: `npm test` -> 34/34 passing; live end-to-end SSE generation verified against production deployment `https://synthetix-agent.vercel.app`.

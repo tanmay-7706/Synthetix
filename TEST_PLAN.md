@@ -20,7 +20,7 @@ npm run lint
 # 3. Production Build Compilation
 npm run build
 
-# 4. Vitest Unit Test Suite (22 Tests)
+# 4. Vitest Unit Test Suite (34 Tests across 6 suites)
 npm test
 
 # 5. Playwright End-to-End Test Suite (16 Tests)
@@ -31,9 +31,9 @@ npm run test:e2e
 
 ## 2. Automated Testing Results & Test Inventory
 
-### 2.1 Unit & Integration Tests (Vitest) — 22 Tests (100% Passing)
-Command: `npm test`  
-Duration: ~180ms  
+### 2.1 Unit & Integration Tests (Vitest) — 34 Tests (100% Passing)
+Command: `npm test`<br />
+Duration: ~140ms<br />
 Files: `tests/unit/*.test.ts`
 
 | Test Suite | File | Tests | Coverage | Status |
@@ -43,6 +43,7 @@ Files: `tests/unit/*.test.ts`
 | **Arcjet Rate Limiting** | `tests/unit/arcjet.test.ts` | 1 | Heal limiter (10 req/min), deploy limiter (3 req/min), AI generation limiter (5 req/min), `userId` token-bucket characteristics | **PASS (1/1)** |
 | **Version History Auth Logic** | `tests/unit/versions-auth.test.ts` | 5 | 401 unauth, 400 missing workspaceId, 404 missing user, 404 unowned workspace (IDOR defense), 200 owner access | **PASS (5/5)** |
 | **Liveblocks Auth Logic** | `tests/unit/liveblocks-auth.test.ts` | 5 | 503 unconfigured secret, 401 unauth, 400 missing room, 403 unowned room, 200 owner session creation | **PASS (5/5)** |
+| **AI JSON Recovery Pipeline** | `tests/unit/json-recovery.test.ts` | 12 | Strict parsing, Markdown code fence stripping, control-character escaping in JSON string literals, unescaped JSX quotes recovery, malformed structural JSON rejection | **PASS (12/12)** |
 
 ### 2.2 End-to-End Tests (Playwright) — 16 Tests (100% Passing)
 Command: `npm run test:e2e`  

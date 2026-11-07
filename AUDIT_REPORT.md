@@ -134,13 +134,14 @@ Across three structured remediation phases, the application was transformed from
     - Executed functional test: invalid `userId` insert rejected with Prisma error `P2003`; valid component inserted, queried via `user.components`, deleted, and row count verified at 0.
 
 ### Phase 5: Automated Testing Suite & Next.js 16 Hardening
-17. **Vitest Unit Test Suite (22/22 Tests Passing)**:
+17. **Vitest Unit Test Suite (34/34 Tests Passing)**:
     - Installed `vitest` and `vite` as devDependencies and configured `vitest.config.mts` with TypeScript path aliases (`@/*`).
     - Implemented unit tests for `lib/project-export.ts` covering React (CRA), Vite + React, Vue 3 (Vite), and invalid framework fallback.
     - Implemented unit tests for `lib/admin.ts` verifying configured admin ID, non-admin rejection, auto mode, and graceful error handling.
     - Implemented unit tests for `lib/arcjet.ts` verifying `healLimiter` (10 req/min), `deployLimiter` (3 req/min), and `userId` characteristics.
     - Implemented unit tests for `app/api/versions/route.ts` testing 401 unauthenticated, 400 missing ID, 404 unowned workspace (IDOR protection), and 200 owner access.
     - Implemented unit tests for `app/api/liveblocks-auth/route.ts` testing 503 missing secret, 401 unauthenticated, 400 missing room, 403 unowned room, and 200 owner authorization.
+    - Implemented unit tests for `lib/json-recovery.ts` (12 tests) testing strict parsing, Markdown code fence stripping, control-character escaping in JSON string literals, unescaped JSX quotes recovery, and malformed syntax rejection.
 18. **Playwright E2E Test Suite (16/16 Tests Passing)**:
     - Installed `@playwright/test` and Chromium browser binaries.
     - Configured `playwright.config.ts` with webServer auto-start, user-agent headers, and trace collection.
@@ -148,6 +149,12 @@ Across three structured remediation phases, the application was transformed from
 19. **Next.js 16 Turbopack Font Compatibility Fix**:
     - File: `app/layout.tsx`
     - Simplified `Lora` font import to avoid multi-style array queries that triggered Turbopack font compiler errors during page compilation.
+20. **Vercel CI Legacy Peer Dependencies Fix**:
+    - File: `.npmrc`
+    - Added `legacy-peer-deps=true` to resolve Vercel deployment build failures caused by an `ERESOLVE` npm peer dependency mismatch between `@types/node` and `vitest`.
+21. **Resilient AI JSON Recovery Pipeline**:
+    - Files: `lib/json-recovery.ts`, `app/api/gen-ai-code/route.ts`
+    - Implemented a 4-tier progressive fallback recovery pipeline that salvages valid files and metadata from Gemini streaming output when raw newlines or unescaped JSX quotes cause strict `JSON.parse` to fail.
 
 ---
 
@@ -157,9 +164,9 @@ Across three structured remediation phases, the application was transformed from
 |---|---|---|
 | `npx tsc --noEmit` | **PASS (0 errors)** | Full project type safety verified |
 | `npm run lint` | **PASS (0 errors, 0 warnings)** | All ESLint and React 19 rules satisfied |
-| `npm run build` | **PASS (0 errors)** | 16/16 static and dynamic routes compiled in 4.6s |
-| `npm test` | **PASS (22/22 passed)** | All unit test suites pass in 179ms |
-| `npm run test:e2e` | **PASS (16/16 passed)** | All browser and API E2E journeys pass in 19.4s |
+| `npm run build` | **PASS (0 errors)** | 16/16 static and dynamic routes compiled in ~4.5s |
+| `npm test` | **PASS (34/34 passed)** | All unit test suites pass in ~140ms |
+| `npm run test:e2e` | **PASS (16/16 passed)** | All browser and API E2E journeys pass in ~20s |
 | `npx prisma validate` | **PASS** | Prisma schema valid and in sync |
 | `npx prisma migrate status` | **PASS (3 applied)** | All 3 migrations tracked; zero drift detected |
 | `Component_userId_fkey` | **PASS (CASCADE)** | Verified in PostgreSQL information_schema |
@@ -177,6 +184,7 @@ Across three structured remediation phases, the application was transformed from
 | `GET /admin` (unauth) | **307 Redirect** | Redirects to `/sign-in` |
 | `GET /library` (unauth) | **307 Redirect** | Redirects to `/sign-in` |
 | `GET /projects` (unauth) | **307 Redirect** | Redirects to `/sign-in` |
+| `POST /api/gen-ai-code` (prod) | **200 OK (Stream)** | End-to-end SSE generation verified live on production |
 
 ---
 
@@ -193,7 +201,7 @@ Across three structured remediation phases, the application was transformed from
 | **Component Database Lifecycle** | **Fully working and verified** | Supabase PostgreSQL and Prisma migrations verified in the development database. |
 | **Arcjet Rate Limiting & Bot Guard** | **Fully working and verified** | Tested in Vitest: token bucket configured with 10 req/min (heal) and 3 req/min (deploy) per user. DRY_RUN in dev, LIVE in prod. |
 | **Live Sandpack Preview & Code Editor** | **Fully working and verified** | Sandpack runtime with Dracula theme and hot-reload verified in browser. |
-| **AI Generation (Gemini 3.5 Flash)** | **Fully working and verified** | Gemini generation verified in development; production-scale usage may require Google Cloud billing/quota configuration. |
+| **AI Generation (Gemini 3.5 Flash)** | **Fully working and verified** | Verified end-to-end in production; full multi-file code streaming, parsing recovery, and DB persistence. |
 | **Vision (Image → Code)** | **Fully working and verified** | MIME type and 5MB validation, error toast notifications verified. |
 | **Multiplayer Collaborator Cursors** | **Partially verified** | Multiplayer presence and cursor broadcasting implemented; live two-user synchronization requires manual verification with two authenticated browser sessions. |
 | **Self-Healing Error Correction** | **Fully working and verified** | Sandpack error interceptor with 1.8s debounce, 3 retry cap, Arcjet rate limit, and credit deduction verified. |
@@ -206,4 +214,5 @@ Across three structured remediation phases, the application was transformed from
 3. **Multi-Framework Project Generation**: Developed a unified build engine supporting Create React App, Vite + React, and Vite + Vue 3, producing complete, installable project bundles for ZIP download and programmatic Vercel deployment.
 4. **Autonomous Error Recovery (Self-Healing)**: Implemented an automated runtime error correction loop that intercepts browser exceptions, debounces inputs, and streams targeted code repairs via Google Gemini with a 3-attempt circuit breaker.
 5. **Defense-in-Depth Security**: Enforced edge-level authentication proxy in Next.js 16, Arcjet token bucket rate limiting (10 req/min healing, 3 req/min deployment), prompt injection defense, and multi-tenant database isolation preventing IDOR attacks.
-6. **Automated Testing & CI Readiness**: Authored a 38-test automated test suite comprising 22 Vitest unit tests (export configs, admin auth, rate limiters, API authorization) and 16 Playwright E2E tests (route guards, API access controls, database component lifecycle) running cleanly in CI.
+6. **Automated Testing & CI Readiness**: Authored a 50-test automated test suite comprising 34 Vitest unit tests (export configs, admin auth, rate limiters, API authorization, JSON recovery) and 16 Playwright E2E tests (route guards, API access controls, database component lifecycle) running cleanly in CI.
+7. **Production Deployment & Resilience**: Deployed production build to Vercel (`https://synthetix-agent.vercel.app`) with custom CI configuration (`.npmrc`), resilient AI streaming JSON recovery, and verified end-to-end multi-file code generation.
