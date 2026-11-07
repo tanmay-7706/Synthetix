@@ -75,6 +75,17 @@ export function WorkspaceClient({
   const [isImproving, setIsImproving] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [frameworkConfig, setFrameworkConfig] = useState<FrameworkConfig>(DEFAULT_CONFIG);
+  const [effectivePrompt] = useState<string | null>(() => {
+    if (initialPrompt) return initialPrompt;
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("synthetix_pending_prompt");
+      if (saved) {
+        sessionStorage.removeItem("synthetix_pending_prompt");
+        return saved;
+      }
+    }
+    return null;
+  });
 
   // AbortController refs — used to cancel in-flight streams
   const generateAbortRef = useRef<AbortController | null>(null);
@@ -347,7 +358,6 @@ export function WorkspaceClient({
       }
     },
     // fileData intentionally omitted — read via fileDataRef above
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [credits, isGenerating, isImproving, userId]
   );
 
@@ -381,7 +391,7 @@ export function WorkspaceClient({
         isGenerating={isGenerating}
         statusLog={statusLog}
         credits={credits}
-        initialPrompt={initialPrompt}
+        initialPrompt={effectivePrompt}
         handleGenerate={handleGenerate}
         handleStop={handleStop}
         userId={userId}
@@ -446,10 +456,13 @@ function WorkspaceInner({
   onFrameworkChange: (cfg: FrameworkConfig) => void;
 }) {
   const content = (
-    <div className="hidden md:flex h-[calc(100vh-3.5rem)] overflow-hidden bg-[#0a0a0a] relative">
+    <div
+      id="workspace-container"
+      className="hidden md:flex h-[calc(100vh-4rem)] overflow-hidden bg-[#0a0a0a] relative"
+    >
       {/* Collaborator cursors overlay */}
       {workspaceId && (
-        <CollaboratorCursors />
+        <CollaboratorCursors containerId="workspace-container" />
       )}
 
       <ChatPanel

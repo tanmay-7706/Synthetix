@@ -23,40 +23,45 @@ export function ProjectCard({ projects }: ProjectCardProps) {
         return (
           <div
             key={project.id}
-            className="group relative flex flex-col rounded-xl border border-white/6 bg-[#0f0f0f] p-4 transition-all duration-300 hover:border-blue-500/15 hover:bg-[#111111] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/5"
+            className="group relative flex flex-col overflow-hidden rounded-xl border border-white/6 bg-[#0f0f0f] transition-all duration-300 hover:border-blue-500/15 hover:bg-[#111111] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/5"
           >
+            {/* Gradient header strip */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500/30 via-violet-500/20 to-cyan-500/30 opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
+
             <Link
               href={`/workspace?id=${project.id}`}
               className="absolute inset-0 rounded-xl"
               aria-label={`Open ${title}`}
             />
 
-            {/* Top row */}
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <p className="line-clamp-1 text-sm font-medium leading-snug text-white/80">
-                {title}
-              </p>
-              <DeleteProjectModal project={project}>
-                <span className="relative z-10 text-white/20 hover:text-red-400">
-                  <Trash2 className="h-3.5 w-3.5" />
+            <div className="p-4">
+              {/* Top row */}
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <p className="line-clamp-1 text-sm font-medium leading-snug text-white/80">
+                  {title}
+                </p>
+                <DeleteProjectModal project={project}>
+                  <span className="relative z-10 flex h-6 w-6 items-center justify-center rounded-md text-white/20 transition-all hover:bg-red-500/10 hover:text-red-400">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </span>
+                </DeleteProjectModal>
+              </div>
+
+              {/* First prompt preview */}
+              {project.firstPrompt && (
+                <p className="mb-3 line-clamp-2 text-[12px] leading-relaxed text-white/30">
+                  {project.firstPrompt}
+                </p>
+              )}
+
+              {/* Meta */}
+              <div className="mt-auto flex items-center gap-3 pt-2 border-t border-white/4">
+                <span className="flex items-center gap-1 text-[11px] text-white/25">
+                  <MessageSquare className="h-3 w-3" />
+                  {msgCount} message{msgCount !== 1 ? "s" : ""}
                 </span>
-              </DeleteProjectModal>
-            </div>
-
-            {/* First prompt preview */}
-            {project.firstPrompt && (
-              <p className="mb-3 line-clamp-2 text-[12px] leading-relaxed text-white/30">
-                {project.firstPrompt}
-              </p>
-            )}
-
-            {/* Meta */}
-            <div className="mt-auto flex items-center gap-3 pt-2 border-t border-white/4">
-              <span className="flex items-center gap-1 text-[11px] text-white/25">
-                <MessageSquare className="h-3 w-3" />
-                {msgCount} message{msgCount !== 1 ? "s" : ""}
-              </span>
-              <span className="text-[11px] text-white/20">{timeAgo}</span>
+                <span className="text-[11px] text-white/20">{timeAgo}</span>
+              </div>
             </div>
           </div>
         );

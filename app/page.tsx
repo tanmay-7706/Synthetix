@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, SignInButton } from "@clerk/nextjs";
+import { useAuth, useClerk, SignInButton } from "@clerk/nextjs";
 import { CheckoutButton } from "@clerk/nextjs/experimental";
 import { ArrowRight, Zap, ChevronRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import {
 
 export default function LandingPage() {
   const { isSignedIn, has } = useAuth();
+  const { openSignIn } = useClerk();
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,8 +44,28 @@ export default function LandingPage() {
   }, [prompt]);
 
   const handleSubmit = () => {
-    if (!prompt.trim() || !isSignedIn) return;
-    router.push(`/workspace?prompt=${encodeURIComponent(prompt.trim())}`);
+    const text = prompt.trim();
+    if (!text) return;
+
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("synthetix_pending_prompt", text);
+    }
+
+    if (!isSignedIn) {
+      if (openSignIn) {
+        openSignIn({
+          fallbackRedirectUrl: `/workspace?prompt=${encodeURIComponent(text)}`,
+          signUpFallbackRedirectUrl: `/workspace?prompt=${encodeURIComponent(text)}`,
+        });
+      } else {
+        router.push(
+          `/sign-in?redirect_url=${encodeURIComponent(`/workspace?prompt=${encodeURIComponent(text)}`)}`
+        );
+      }
+      return;
+    }
+
+    router.push(`/workspace?prompt=${encodeURIComponent(text)}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -119,24 +140,15 @@ export default function LandingPage() {
                 Press ⏎ to generate · Shift+⏎ for new line
               </span>
 
-              {isSignedIn ? (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!prompt.trim()}
-                  className="h-8 rounded-full px-5 font-semibold"
-                  variant={prompt.trim() ? "default" : "secondary"}
-                >
-                  Generate
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              ) : (
-                <SignInButton mode="modal">
-                  <Button className="h-8 rounded-full bg-white px-5 font-semibold">
-                    Generate
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </SignInButton>
-              )}
+              <Button
+                onClick={handleSubmit}
+                disabled={!prompt.trim()}
+                className="h-8 rounded-full px-5 font-semibold"
+                variant={prompt.trim() ? "default" : "secondary"}
+              >
+                Generate
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
 
@@ -523,7 +535,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <section className="relative mx-auto mb-32 max-w-5xl overflow-hidden rounded-2xl border border-white/8 px-10 py-24 text-center">
+      <section className="relative mx-auto mb-32 max-w-5xl overflow-hidden rounded-2xl border border-white/8 bg-[#0f0f0f] px-10 py-24 text-center">
         <HoleBackground
           strokeColor="rgba(255,255,255,0.05)" // blur
           numberOfLines={36}
@@ -557,7 +569,7 @@ export default function LandingPage() {
         </SignInButton>
       </section>
 
-      <footer className="relative z-10 border-t border-white/7 py-12 mx-auto px-6 flex flex-col items-center justify-center gap-6 text-stone-400">
+      <footer className="relative z-10 border-t border-white/7 py-12 mx-auto px-6 flex flex-col items-center justify-center gap-6 text-white/30">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <span className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-[11px] font-medium text-white/40">Next.js 16</span>
           <span className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-[11px] font-medium text-white/40">React 19</span>

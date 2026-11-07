@@ -1,6 +1,7 @@
 "use client";
 
-import { useOthers, useSelf } from "@/lib/liveblocks.config";
+import { useEffect } from "react";
+import { useOthers, useSelf, useMyPresence } from "@/lib/liveblocks.config";
 
 /**
  * Renders floating avatar pills for all collaborators currently in the room.
@@ -49,11 +50,47 @@ export function CollaboratorAvatars() {
 }
 
 /**
- * Renders floating cursor labels for collaborators.
- * Each cursor shows a colored pointer with the user's name.
+ * Renders floating cursor labels for collaborators and tracks local pointer movement.
+ * Broadcasts local cursor coordinates inside the workspace container via Liveblocks presence.
  */
-export function CollaboratorCursors() {
+export function CollaboratorCursors({
+  containerId = "workspace-container",
+}: {
+  containerId?: string;
+}) {
   const others = useOthers();
+  const [, updateMyPresence] = useMyPresence();
+
+  useEffect(() => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      updateMyPresence({
+        cursor: {
+          x: Math.round(e.clientX),
+          y: Math.round(e.clientY),
+        },
+      });
+    };
+
+    const handlePointerLeave = () => {
+      updateMyPresence({ cursor: null });
+    };
+
+    container.addEventListener("pointermove", handlePointerMove);
+    container.addEventListener("pointerleave", handlePointerLeave);
+
+    return () => {
+      container.removeEventListener("pointermove", handlePointerMove);
+      container.removeEventListener("pointerleave", handlePointerLeave);
+      try {
+        updateMyPresence({ cursor: null });
+      } catch {
+        // Safe unmount
+      }
+    };
+  }, [containerId, updateMyPresence]);
 
   return (
     <>

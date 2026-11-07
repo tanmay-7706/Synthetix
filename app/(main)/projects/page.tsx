@@ -43,7 +43,7 @@ export default async function ProjectsPage() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <BlueTitle className="text-6xl">Projects</BlueTitle>
+            <BlueTitle className="text-3xl">Projects</BlueTitle>
             <p className="mt-3 text-sm text-white/30">
               All your AI-generated apps in one place.
             </p>

@@ -9,7 +9,6 @@ import {
   type UILibKey,
   FRAMEWORK_LABELS,
   UI_LABELS,
-  DEFAULT_CONFIG,
 } from "@/lib/framework-configs";
 
 interface FrameworkModalProps {

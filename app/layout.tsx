@@ -9,8 +9,6 @@ import { Toaster } from "@/components/ui/sonner";
 
 const lora = Lora({
   subsets: ["latin"],
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
   variable: "--font-serif",
 });
 
@@ -44,8 +42,8 @@ export default function RootLayout({
         >
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="dark"
+            forcedTheme="dark"
             disableTransitionOnChange
           >
             <Header />

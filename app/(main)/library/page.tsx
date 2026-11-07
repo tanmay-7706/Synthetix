@@ -26,22 +26,27 @@ export default function LibraryPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    fetchComponents();
-  }, [isLoaded]);
+    let ignore = false;
 
-  const fetchComponents = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/components");
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = (await res.json()) as { components: Component[] };
-      setComponents(data.components);
-    } catch {
-      toast.error("Failed to load components");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    fetch("/api/components")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json() as Promise<{ components: Component[] }>;
+      })
+      .then((data) => {
+        if (!ignore) setComponents(data.components);
+      })
+      .catch(() => {
+        if (!ignore) toast.error("Failed to load components");
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isLoaded]);
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
@@ -72,21 +77,19 @@ export default function LibraryPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center bg-[#0a0a0a]">
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#0a0a0a]">
         <Loader2 className="h-6 w-6 animate-spin text-white/30" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-[#0a0a0a] px-8 py-8">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0a0a0a] px-8 py-8">
       {/* Header */}
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white/90">
-              <BlueTitle>Component Library</BlueTitle>
-            </h1>
+            <BlueTitle className="text-2xl">Component Library</BlueTitle>
             <p className="mt-1 text-sm text-white/30">
               Your saved components — reuse across projects
             </p>

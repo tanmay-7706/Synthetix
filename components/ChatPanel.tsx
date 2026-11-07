@@ -19,6 +19,7 @@ import type { Message, StatusStep } from "@/types/workspace";
 import { createClient } from "@supabase/supabase-js";
 import { BlueTitle } from "./reusables";
 import Image from "next/image";
+import { toast } from "sonner";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,7 +109,21 @@ export function ChatPanel({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file (PNG, JPG, WebP)");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
+    // 5MB limit
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     setIsUploading(true);
     try {
       const ext = file.name.split(".").pop();
@@ -116,13 +131,20 @@ export function ChatPanel({
       const { error } = await supabase.storage
         .from("workspace-images")
         .upload(path, file, { upsert: true });
-      if (error) throw error;
+
+      if (error) {
+        throw new Error(error.message || "Failed to upload image to storage");
+      }
+
       const { data } = supabase.storage
         .from("workspace-images")
         .getPublicUrl(path);
+
       setPendingImageUrl(data.publicUrl);
-    } catch {
-      // silent
+      toast.success("Image attached as design reference");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to upload image";
+      toast.error(msg);
     } finally {
       setIsUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -135,8 +157,8 @@ export function ChatPanel({
   return (
     <div className="flex w-[320px] shrink-0 flex-col bg-[#0d0d0d]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/6 px-2 py-3">
-        <BlueTitle>{appTitle}</BlueTitle>
+      <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
+        <BlueTitle>{appTitle ?? "New Project"}</BlueTitle>
         <PricingModal reason={noCredits ? "credits" : "upgrade"}>
           <span
             className={cn(
