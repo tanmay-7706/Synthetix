@@ -155,6 +155,13 @@ Across three structured remediation phases, the application was transformed from
 21. **Resilient AI JSON Recovery Pipeline**:
     - Files: `lib/json-recovery.ts`, `app/api/gen-ai-code/route.ts`
     - Implemented a 4-tier progressive fallback recovery pipeline that salvages valid files and metadata from Gemini streaming output when raw newlines or unescaped JSX quotes cause strict `JSON.parse` to fail.
+22. **Supabase PostgreSQL RLS Hardening, Migration Reconciliation & Access Verification**:
+    - File: `prisma/migrations/20261110171000_enable_rls_component_and_migrations/migration.sql` (reconciled as applied via `npx prisma migrate resolve --applied 20261110171000_enable_rls_component_and_migrations`). Captures `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;` across all five public tables (`User`, `Workspace`, `Version`, `Component`, `_prisma_migrations`), because earlier init/baseline migrations did not record RLS statements for `User`, `Workspace`, or `Version`.
+    - **Fresh Replay Verified Locally**: Replayed all 4 migrations sequentially against an isolated disposable `@electric-sql/pglite` PostgreSQL instance; confirmed all 5 tables end with `relrowsecurity = true`, `relforcerowsecurity = false`, and `0` policies.
+    - **RLS Blocking Supabase Data API**: All 5 public tables have RLS enabled with zero policies (default-deny). Verified live via PostgREST (`anon`) and PostgreSQL `SET LOCAL ROLE anon`/`authenticated`: reads return `0` rows (`[]`), updates/deletes affect `0` rows, and inserts fail with SQLSTATE `42501`. Direct client access via `@supabase/supabase-js` is strictly limited to the `workspace-images` Storage bucket.
+    - **Privileged Role Bypassing RLS**: Verified via `pg_roles` that both `DATABASE_URL` (pooler) and `DIRECT_URL` (migrations) connect as PostgreSQL role `postgres` (`rolbypassrls = true`, table owner, `FORCE ROW LEVEL SECURITY` disabled), bypassing RLS for trusted server operations.
+    - **Clerk Auth & Server Ownership Checks Essential**: Because `postgres` bypasses RLS, Clerk authentication and server-side ownership filters (`where: { userId: user.id }`) remain the sole tenant isolation boundary for Prisma endpoints.
+    - **Migration Status & Historical Scope Caveats**: `prisma migrate status` confirms tracking entries in `_prisma_migrations` and is not, by itself, proof of zero out-of-band schema drift (such as RLS or policy changes). Furthermore, enabling RLS prevents future unauthorized Supabase Data API access and does not prove whether any historical unauthorized access occurred prior to RLS enforcement.
 
 ---
 
@@ -168,9 +175,12 @@ Across three structured remediation phases, the application was transformed from
 | `npm test` | **PASS (34/34 passed)** | All unit test suites pass in ~140ms |
 | `npm run test:e2e` | **PASS (16/16 passed)** | All browser and API E2E journeys pass in ~20s |
 | `npx prisma validate` | **PASS** | Prisma schema valid and in sync |
-| `npx prisma migrate status` | **PASS (3 applied)** | All 3 migrations tracked; zero drift detected |
+| `npx prisma migrate status` | **PASS (4 applied)** | All 4 migrations reconciled in `_prisma_migrations` (`prisma migrate diff` reports no schema drift on Prisma-managed objects; not standalone proof against out-of-band DDL drift) |
+| **Isolated Replay (`pglite`)** | **PASS (4/4 applied)** | Fresh-database replay confirmed all 5 tables have `relrowsecurity = true` and `0` policies |
 | `Component_userId_fkey` | **PASS (CASCADE)** | Verified in PostgreSQL information_schema |
 | Component Lifecycle & FK Test | **PASS** | P2003 on invalid insert; insert/read/delete verified |
+| **Supabase Data API (`anon`/`authenticated`)** | **BLOCKED (Default-Deny RLS)** | 0 rows returned on SELECT/PATCH/DELETE across all 5 tables; `42501` RLS violation on POST/INSERT |
+| **Authenticated Prod Workflows** | **PASS** | Workspace list/load (`/projects`, `/workspace`), Component save/list/delete, and Version list/restore verified on production |
 | `GET /` | **200 OK** | Landing page renders with zero errors |
 | `GET /sign-in` | **200 OK** | Clean auth rendering via `app/(auth)/` |
 | `GET /sign-up` | **200 OK** | Clean auth rendering via `app/(auth)/` |

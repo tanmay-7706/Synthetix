@@ -107,6 +107,12 @@ flowchart TD
     SP -.->|Runtime Error| HEAL
 ```
 
+### Database Security & Access Model
+- **Supabase Data API (Default-Deny RLS)**: Row-Level Security (`RLS`) is enabled across all five public tables (`User`, `Workspace`, `Version`, `Component`, `_prisma_migrations`) via Prisma migration history (`20261110171000_enable_rls_component_and_migrations`) with zero permissive policies. Ordinary `anon` and `authenticated` Supabase Data API (`PostgREST`) requests cannot read or mutate application tables (`0` rows returned on reads/updates/deletes; `42501` RLS errors on inserts). `@supabase/supabase-js` is used exclusively for `workspace-images` Storage uploads, never direct table queries.
+- **Privileged Server Role (`postgres`) Bypass**: Server-side Prisma connections (`DATABASE_URL` pooler and `DIRECT_URL` CLI) authenticate as the privileged `postgres` role (`rolbypassrls = true`, table owner, `FORCE ROW LEVEL SECURITY` disabled), bypassing RLS for trusted server operations and schema migrations.
+- **Clerk Auth & Server-Side Ownership Checks Remain Essential**: Because Prisma bypasses RLS, all database access runs exclusively inside Clerk-authenticated Next.js Server Actions and Route Handlers enforcing tenant ownership filters (`where: { userId: user.id }`) to prevent IDOR attacks.
+- **Migration Status vs. Drift & Historical Scope**: `prisma migrate status` verifies recorded migration history in `_prisma_migrations` and is not, by itself, proof of zero out-of-band schema drift. Enabling default-deny RLS blocks future ordinary Data API access and does not prove no historical unauthorized access occurred prior to RLS enforcement.
+
 ---
 
 ## 🛠️ Tech Stack

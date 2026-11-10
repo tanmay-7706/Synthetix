@@ -207,3 +207,15 @@ This document details the completed and proposed fixes for issues identified in 
 - **Status**: **RESOLVED**
 - **Action**: Implemented a 4-tier progressive fallback recovery pipeline (`safeParseAiJson`) that strips Markdown code fences, extracts outer JSON boundaries, escapes raw newlines/control characters in JSON string values, and extracts structural fields when Gemini emits unescaped double quotes in JSX attributes. Added 12 comprehensive unit tests.
 - **Verification**: `npm test` -> 34/34 passing; live end-to-end SSE generation verified against production deployment `https://synthetix-agent.vercel.app`.
+
+### Fix 5.6: Supabase Row-Level Security (RLS) Reconciliation & Verification
+- **Target Files**: `prisma/migrations/20261110171000_enable_rls_component_and_migrations/migration.sql`, `README.md`, `AUDIT_REPORT.md`, `RELEASE_CHECKLIST.md`, `TEST_PLAN.md`
+- **Status**: **RESOLVED**
+- **Action**:
+  - Added reproducible Prisma SQL migration enabling default-deny RLS on all five public tables (`User`, `Workspace`, `Version`, `Component`, `_prisma_migrations`) so a fresh `prisma migrate deploy` reproduces the full live Supabase RLS configuration cleanly (since earlier init/baseline migrations did not contain RLS statements).
+  - Reconciled live `_prisma_migrations` history via `npx prisma migrate resolve --applied 20261110171000_enable_rls_component_and_migrations` without resets or manual table edits.
+  - Confirmed zero direct PostgREST client table queries exist in the codebase (`@supabase/supabase-js` is used solely for `workspace-images` Storage), so zero permissive (`USING (true)`) or client policies were added.
+  - Updated security documentation to distinguish default-deny RLS blocking Supabase Data API (`anon`/`authenticated`) access, server-side ownership checks + Clerk authentication protecting Prisma queries (`where: { userId: user.id }`), the privileged `postgres` role (`rolbypassrls = true`) bypassing RLS, and caveats that `prisma migrate status` alone does not guarantee zero out-of-band drift and enabling RLS does not prove no historical unauthorized access occurred.
+- **Verification**:
+  - Isolated local `@electric-sql/pglite` replay: 4/4 migrations applied from empty state; all 5 tables verified `relrowsecurity = true` with `0` policies.
+  - Live `prisma migrate status`: 4 applied migrations, database schema up to date; PostgREST `anon` and Postgres `anon`/`authenticated` roles blocked across all 5 tables; authenticated `/projects`, `/workspace`, `/api/components`, and `/api/versions` workflows verified against production.

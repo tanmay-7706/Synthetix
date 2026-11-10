@@ -11,7 +11,7 @@
 | Gate / Quality Check | Standard / Command | Result | Details |
 |---|---|---|---|
 | **Database Schema** | `npx prisma validate` | **PASS** | Valid datamodel, 0 syntax or mapping errors |
-| **Database Migrations** | `npx prisma migrate status` | **PASS** | 3 applied migrations; 0 drift against PostgreSQL 17.6 |
+| **Database Migrations** | `npx prisma migrate status` | **PASS** | 4 applied migrations tracked in `_prisma_migrations` (`prisma migrate status` checks tracking history only and is not standalone proof of zero out-of-band DDL drift) |
 | **Static Type Check** | `npx tsc --noEmit` | **PASS** | Strict TypeScript compilation; 0 errors |
 | **Code Linting** | `npm run lint` | **PASS** | ESLint 9 & Next.js Core Web Vitals; 0 errors, 0 warnings |
 | **Production Build** | `npm run build` | **PASS** | 16/16 routes compiled cleanly with Turbopack in ~4.5s |
@@ -76,7 +76,7 @@ npm run dev
 - [x] **No Secret Leakage**: Verified that `.env`, `.env.local`, and API keys are strictly excluded from Git.
 - [x] **Safe `.env.example`**: Verified that only placeholder strings exist in `.env.example`.
 - [x] **Clean Git Status**: No temporary scratch files, debug artifacts, or test result folders tracked.
-- [x] **Database Safety**: All migrations applied non-destructively; 0 rows dropped, 0 destructive commands.
+- [x] **Database Safety & RLS Separation**: Default-deny RLS enabled on all 5 public tables (`User`, `Workspace`, `Version`, `Component`, `_prisma_migrations`) blocking `anon`/`authenticated` Supabase Data API access; server-side Prisma connects as privileged role `postgres` (`rolbypassrls = true`) and enforces tenant isolation via Clerk auth + application ownership queries (`where: { userId: user.id }`).
 - [x] **Edge Proxy Protected**: Private surfaces (`/workspace`, `/projects`, `/library`, `/admin`) guarded by Next.js 16 Proxy.
 - [x] **Arcjet Environment Mode**: Automatically switches to `LIVE` mode when `NODE_ENV === "production"`.
 - [x] **Package Bundles**: Vite React, Vue 3, and CRA bundles compile cleanly without missing dependencies.
@@ -92,12 +92,14 @@ npm run dev
 2. **In-Browser Sandpack Runtime**: Engineered an interactive code execution environment with live preview, syntax-highlighted editing (CodeMirror), hot reload, and incremental file tree patching without full iframe reloads.
 3. **Multi-Framework Project Generation**: Developed a unified build engine supporting Create React App, Vite + React, and Vite + Vue 3, producing complete, installable project bundles for ZIP download and programmatic Vercel deployment.
 4. **Autonomous Error Recovery (Self-Healing)**: Implemented an automated runtime error correction loop that intercepts browser exceptions, debounces inputs, and streams targeted code repairs via Google Gemini with a 3-attempt circuit breaker.
-5. **Defense-in-Depth Security**: Enforced edge-level authentication proxy in Next.js 16, Arcjet token bucket rate limiting (10 req/min healing, 3 req/min deployment), prompt injection defense, and multi-tenant database isolation preventing IDOR attacks.
+5. **Defense-in-Depth Security**: Enforced edge-level authentication proxy in Next.js 16, Arcjet token bucket rate limiting (10 req/min healing, 3 req/min deployment), prompt injection defense, default-deny PostgreSQL RLS blocking Supabase Data API access, and server-side multi-tenant ownership checks in Prisma preventing IDOR attacks.
 6. **Automated Testing & CI Readiness**: Authored a 50-test automated test suite comprising 34 Vitest unit tests (export configs, admin auth, rate limiters, API authorization, JSON recovery) and 16 Playwright E2E tests (route guards, API access controls, database component lifecycle) running cleanly in CI.
 7. **Production Deployment & Resilience**: Deployed production build to Vercel (`https://synthetix-agent.vercel.app`) with custom CI configuration (`.npmrc`), resilient AI streaming JSON recovery, and verified end-to-end multi-file code generation.
 
 ### ❌ What You Must NOT Claim:
 - **Do NOT claim live real-time multi-user cursor sync** as fully verified in production until tested with two active browser sessions logged into separate Clerk accounts against Liveblocks. (Claim: *“Designed and implemented room-based authorization and pointer coordinate broadcasting with Liveblocks”*).
-- **Do NOT claim PostgreSQL Row-Level Security (RLS)** policies exist at the database engine level. (Claim: *“Enforced application-level multi-tenant isolation and cascading relational integrity via Prisma ORM”*).
+- **Do NOT claim PostgreSQL RLS policies isolate per-user Prisma queries**: All 5 public tables use default-deny RLS with zero policies solely to block ordinary `anon`/`authenticated` Supabase Data API access. Server-side Prisma connects as privileged role `postgres` (`rolbypassrls = true`) and bypasses RLS, so Clerk authentication and application-level ownership checks (`where: { userId: user.id }`) remain essential for tenant isolation.
+- **Do NOT claim `prisma migrate status` alone proves zero schema drift**: `migrate status` verifies `_prisma_migrations` history tracking and does not detect out-of-band DDL such as external RLS changes.
+- **Do NOT claim enabling RLS proves no historical unauthorized access occurred** prior to RLS enforcement.
 - **Do NOT claim live one-click user app deployment to Vercel** as fully verified in production (Claim: *“Engineered programmatic Vercel deployment integration via REST API; verified in mock tests to avoid consuming live Vercel project quotas”*).
 
