@@ -219,3 +219,13 @@ This document details the completed and proposed fixes for issues identified in 
 - **Verification**:
   - Isolated local `@electric-sql/pglite` replay: 4/4 migrations applied from empty state; all 5 tables verified `relrowsecurity = true` with `0` policies.
   - Live `prisma migrate status`: 4 applied migrations, database schema up to date; PostgREST `anon` and Postgres `anon`/`authenticated` roles blocked across all 5 tables; authenticated `/projects`, `/workspace`, `/api/components`, and `/api/versions` workflows verified against production.
+
+### Fix 5.7: Focused RLS Catalog & Migration-Replay Regression Check
+- **Target Files**: `lib/rls-check.mjs`, `lib/rls-check.d.mts`, `scripts/check-rls.mjs`, `tests/unit/rls-check.test.ts`, `package.json`, `.github/workflows/ci.yml`
+- **Status**: **RESOLVED**
+- **Action**:
+  - Declared `@electric-sql/pglite`, `@electric-sql/pglite-socket`, and `dotenv` explicitly in `devDependencies`.
+  - Implemented `lib/rls-check.mjs` + `scripts/check-rls.mjs` supporting `npm run check:rls:replay` (loopback-guarded isolated PGlite migration replay invoking local Prisma CLI directly via `execFile`, zero secrets, wired into CI) and `npm run check:rls:live` (manual read-only catalog inspection via `BEGIN READ ONLY` using `dotenv`, never run in default tests or PR CI).
+  - Fails cleanly on missing expected tables, disabled RLS on expected or additional public tables, unexpected policies, invalid CLI flags, or non-loopback replay URLs; sanitizes driver/network errors via `formatSafeRlsError` so hosts, ports, usernames, passwords, and URIs never appear in output.
+  - Added 10 offline synthetic-row unit tests in `tests/unit/rls-check.test.ts` (including error sanitization checks).
+- **Verification**: `npm run check:rls:replay` passed; `npm run check:rls:live` passed read-only; `npm test` -> 44/44 passing across 7 suites (plus 16 E2E tests verified in the preceding full verification pass).

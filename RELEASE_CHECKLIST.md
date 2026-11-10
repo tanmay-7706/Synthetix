@@ -15,8 +15,9 @@
 | **Static Type Check** | `npx tsc --noEmit` | **PASS** | Strict TypeScript compilation; 0 errors |
 | **Code Linting** | `npm run lint` | **PASS** | ESLint 9 & Next.js Core Web Vitals; 0 errors, 0 warnings |
 | **Production Build** | `npm run build` | **PASS** | 16/16 routes compiled cleanly with Turbopack in ~4.5s |
-| **Unit Test Suite** | `npm test` | **PASS (34/34)** | 100% passing across 6 test suites in ~140ms |
-| **E2E Test Suite** | `npm run test:e2e` | **PASS (16/16)** | 100% passing across 3 Chromium suites in ~20s |
+| **Unit Test Suite** | `npm test` | **PASS (44/44)** | Executed in latest pass across 7 offline test suites (~160ms) |
+| **RLS Regression Check** | `npm run check:rls:replay` & `:live` | **PASS (5/5 tables)** | Isolated PGlite replay & read-only live catalog check verify default-deny RLS (`0` policies; does not prove all DB security or historical non-access) |
+| **E2E Test Suite** | `npm run test:e2e` | **PASS (16/16 recorded)** | Recorded from prior full verification pass across 3 Chromium suites (~20s) |
 | **Framework Bundler** | Independent clean install & build | **PASS** | Vite React & Vue 3 build independently in <260ms |
 | **IDOR & Route Security** | Automated access control | **PASS** | 401/403/404 enforced on unauthenticated & cross-tenant requests |
 | **Live AI Generation** | End-to-end SSE stream in production | **PASS** | Verified live on Vercel: streaming thoughts, package validation, multi-file code persistence, version snapshotting |
@@ -56,8 +57,9 @@ npx prisma migrate deploy
 npx prisma generate
 
 # 5. Execute full test suite
-npm test            # 34 Vitest unit tests across 6 suites
-npm run test:e2e    # 16 Playwright E2E tests
+npm test                 # 44 Vitest unit tests across 7 suites (offline)
+npm run check:rls:replay # Isolated PGlite migration replay + RLS catalog guard (CI-safe)
+npm run test:e2e         # 16 Playwright E2E tests
 
 # 6. Verify build and code quality
 npx tsc --noEmit
@@ -93,13 +95,13 @@ npm run dev
 3. **Multi-Framework Project Generation**: Developed a unified build engine supporting Create React App, Vite + React, and Vite + Vue 3, producing complete, installable project bundles for ZIP download and programmatic Vercel deployment.
 4. **Autonomous Error Recovery (Self-Healing)**: Implemented an automated runtime error correction loop that intercepts browser exceptions, debounces inputs, and streams targeted code repairs via Google Gemini with a 3-attempt circuit breaker.
 5. **Defense-in-Depth Security**: Enforced edge-level authentication proxy in Next.js 16, Arcjet token bucket rate limiting (10 req/min healing, 3 req/min deployment), prompt injection defense, default-deny PostgreSQL RLS blocking Supabase Data API access, and server-side multi-tenant ownership checks in Prisma preventing IDOR attacks.
-6. **Automated Testing & CI Readiness**: Authored a 50-test automated test suite comprising 34 Vitest unit tests (export configs, admin auth, rate limiters, API authorization, JSON recovery) and 16 Playwright E2E tests (route guards, API access controls, database component lifecycle) running cleanly in CI.
+6. **Automated Testing & CI Readiness**: Maintained 44 Vitest unit tests (export configs, admin auth, rate limiters, API authorization, JSON recovery, RLS catalog guard & error sanitization) and 16 Playwright E2E tests (route guards, API access controls, database component lifecycle), plus isolated PGlite migration replay checks running cleanly in CI.
 7. **Production Deployment & Resilience**: Deployed production build to Vercel (`https://synthetix-agent.vercel.app`) with custom CI configuration (`.npmrc`), resilient AI streaming JSON recovery, and verified end-to-end multi-file code generation.
 
 ### ❌ What You Must NOT Claim:
 - **Do NOT claim live real-time multi-user cursor sync** as fully verified in production until tested with two active browser sessions logged into separate Clerk accounts against Liveblocks. (Claim: *“Designed and implemented room-based authorization and pointer coordinate broadcasting with Liveblocks”*).
 - **Do NOT claim PostgreSQL RLS policies isolate per-user Prisma queries**: All 5 public tables use default-deny RLS with zero policies solely to block ordinary `anon`/`authenticated` Supabase Data API access. Server-side Prisma connects as privileged role `postgres` (`rolbypassrls = true`) and bypasses RLS, so Clerk authentication and application-level ownership checks (`where: { userId: user.id }`) remain essential for tenant isolation.
 - **Do NOT claim `prisma migrate status` alone proves zero schema drift**: `migrate status` verifies `_prisma_migrations` history tracking and does not detect out-of-band DDL such as external RLS changes.
-- **Do NOT claim enabling RLS proves no historical unauthorized access occurred** prior to RLS enforcement.
+- **Do NOT claim RLS regression checks verify all database security or prove no historical unauthorized access occurred** prior to RLS enforcement (`check:rls:replay` verifies PGlite migration execution and catalog invariants rather than complete Supabase/PostgREST runtime behavior or native PostgreSQL parity).
 - **Do NOT claim live one-click user app deployment to Vercel** as fully verified in production (Claim: *“Engineered programmatic Vercel deployment integration via REST API; verified in mock tests to avoid consuming live Vercel project quotas”*).
 

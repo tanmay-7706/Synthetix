@@ -12,6 +12,8 @@ Any reviewer or developer can clone the repository and run the full deterministi
 # 1. Database & Schema Verification
 npx prisma validate
 npx prisma migrate status
+npm run check:rls:replay   # Isolated migration replay + RLS catalog check (zero secrets, PGlite)
+# npm run check:rls:live  # Optional manual read-only live catalog check (excluded from CI/unit tests)
 
 # 2. Static Analysis & Type Safety
 npx tsc --noEmit
@@ -20,7 +22,7 @@ npm run lint
 # 3. Production Build Compilation
 npm run build
 
-# 4. Vitest Unit Test Suite (34 Tests across 6 suites)
+# 4. Vitest Unit Test Suite (44 Tests across 7 suites)
 npm test
 
 # 5. Playwright End-to-End Test Suite (16 Tests)
@@ -31,9 +33,9 @@ npm run test:e2e
 
 ## 2. Automated Testing Results & Test Inventory
 
-### 2.1 Unit & Integration Tests (Vitest) — 34 Tests (100% Passing)
+### 2.1 Unit & Integration Tests (Vitest) — 44 Tests (100% Passing in Latest Run)
 Command: `npm test`<br />
-Duration: ~140ms<br />
+Duration: ~160ms<br />
 Files: `tests/unit/*.test.ts`
 
 | Test Suite | File | Tests | Coverage | Status |
@@ -44,8 +46,9 @@ Files: `tests/unit/*.test.ts`
 | **Version History Auth Logic** | `tests/unit/versions-auth.test.ts` | 5 | 401 unauth, 400 missing workspaceId, 404 missing user, 404 unowned workspace (IDOR defense), 200 owner access | **PASS (5/5)** |
 | **Liveblocks Auth Logic** | `tests/unit/liveblocks-auth.test.ts` | 5 | 503 unconfigured secret, 401 unauth, 400 missing room, 403 unowned room, 200 owner session creation | **PASS (5/5)** |
 | **AI JSON Recovery Pipeline** | `tests/unit/json-recovery.test.ts` | 12 | Strict parsing, Markdown code fence stripping, control-character escaping in JSON string literals, unescaped JSX quotes recovery, malformed structural JSON rejection | **PASS (12/12)** |
+| **RLS Catalog Regression** | `tests/unit/rls-check.test.ts` | 10 | Compliant 5-table default-deny pass, missing table, RLS disabled, unexpected policy, additional unprotected public table, CLI flags, loopback guard, connection-error sanitization | **PASS (10/10)** |
 
-### 2.2 End-to-End Tests (Playwright) — 16 Tests (100% Passing)
+### 2.2 End-to-End Tests (Playwright) — 16 Tests (Recorded From Prior Full Verification Pass)
 Command: `npm run test:e2e`  
 Duration: ~20s  
 Files: `tests/e2e/*.spec.ts`
@@ -88,8 +91,9 @@ Files: `tests/e2e/*.spec.ts`
 | **SEC-08** | Database Foreign Key Constraint Integrity | Postgres `Component_userId_fkey` | Attempting to insert a Component record with a non-existent `userId`. | Database rejects insert with foreign key violation (Prisma P2003). |
 
 > **Security Architecture Notes**:
-> - **RLS vs. Server-Side Ownership**: Default-deny RLS blocks ordinary Supabase Data API table access (`anon`/`authenticated`). Server-side Prisma connects as the privileged `postgres` role (`rolbypassrls = true`), which bypasses RLS; Clerk authentication and application-layer ownership checks (`SEC-01`, `SEC-02`, `SEC-06`) therefore remain essential for tenant isolation.
-> - **Migration Tracking vs. Drift & History**: `prisma migrate status` checks `_prisma_migrations` records only and is not, by itself, proof of zero out-of-band schema drift. Enabling RLS prevents future unauthorized Data API access and does not prove no historical unauthorized access occurred.
+> - **RLS vs. Server-Side Ownership**: Default-deny RLS blocks ordinary Supabase Data API table access (`anon`/`authenticated`). Server-side Prisma connects as the privileged `postgres` role (`rolbypassrls = true`), which bypasses RLS; Clerk authentication and application-layer ownership checks (`SEC-01`, `SEC-02`, `SEC-06`) remain mandatory for tenant isolation.
+> - **Regression Check Scope**: `npm run check:rls:replay` verifies Prisma migration execution and catalog invariants across all 5 public tables inside an isolated embedded `@electric-sql/pglite` database (it does not verify all database security properties, complete Supabase/PostgREST runtime behavior, or native PostgreSQL parity). `npm run check:rls:live` runs read-only catalog checks against `DIRECT_URL`/`DATABASE_URL` and is excluded from unit tests and public PR CI workflows.
+> - **Migration Tracking vs. Drift & History**: `prisma migrate status` checks `_prisma_migrations` records only and is not, by itself, proof of zero out-of-band schema drift. Enabling RLS prevents future unauthorized Data API access and does not establish whether historical unauthorized access occurred.
 
 ---
 

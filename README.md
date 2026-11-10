@@ -19,7 +19,7 @@
     <img src="https://img.shields.io/badge/Google_Gemini-3.5_Flash-FF6D00?style=flat-square&logo=google&logoColor=white" alt="Gemini AI" />
     <img src="https://img.shields.io/badge/Supabase-PostgreSQL_17-3FCF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase" />
     <img src="https://img.shields.io/badge/Prisma_ORM-Type--Safe_Schema-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
-    <img src="https://img.shields.io/badge/Vitest-34_Unit_Tests_Passed-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest" />
+    <img src="https://img.shields.io/badge/Vitest-44_Unit_Tests_Passed-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest" />
     <img src="https://img.shields.io/badge/Playwright-16_E2E_Tests_Passed-45ba4b?style=flat-square&logo=playwright&logoColor=white" alt="Playwright" />
     <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
   </p>
@@ -212,10 +212,11 @@ npx prisma migrate deploy
 npx prisma generate
 ```
 
-### 5. Execute Automated Test Suites
+### 5. Execute Automated Test Suites & RLS Regression Checks
 ```bash
-npm test            # 34 Vitest unit tests (~140ms execution)
-npm run test:e2e    # 16 Playwright browser journeys
+npm test                 # 44 Vitest unit tests (offline, zero DB credentials)
+npm run check:rls:replay # Isolated PGlite migration replay + catalog RLS check (CI-safe)
+npm run test:e2e         # 16 Playwright browser journeys (requires browser env)
 ```
 
 ### 6. Verify Static Types & Build
@@ -238,8 +239,14 @@ npm run dev
 Synthetix includes a comprehensive, multi-tiered test suite that runs fast, deterministically, and independently of paid external services:
 
 ```bash
-# Run Vitest unit tests (34 tests across 6 test suites)
+# Run Vitest unit tests (44 tests across 7 suites; offline, zero DB credentials)
 npm test
+
+# Run isolated migration replay & RLS invariant check (uses embedded PGlite, safe in CI/local)
+npm run check:rls:replay
+
+# Optional manual read-only check against live Supabase/PostgreSQL catalog (requires DB URL; never run in PR CI)
+npm run check:rls:live
 
 # Run tests in watch mode during development
 npm run test:watch
@@ -248,19 +255,25 @@ npm run test:watch
 npm run test:e2e
 ```
 
-### Test Inventory (50 Tests Total):
+> **Regression Check Boundaries**:
+> - `npm run check:rls:replay` replays all Prisma migrations onto an isolated in-memory `@electric-sql/pglite` server and verifies that all five public tables (`User`, `Workspace`, `Version`, `Component`, `_prisma_migrations`) and any additional public tables enforce default-deny RLS (`rls_enabled = true`, `0` policies). This checks migration execution and catalog invariants only — it does not model complete Supabase/PostgREST runtime behavior or guarantee full native PostgreSQL parity.
+> - `npm run check:rls:live` performs the same read-only `pg_class`/`pg_policies` inspection inside `BEGIN READ ONLY` against the configured database and is excluded from default unit tests and public pull-request CI workflows.
+> - Enabling default-deny RLS blocks future ordinary Supabase Data API table access (`anon`/`authenticated`), whereas Prisma's privileged runtime role (`postgres`) bypasses RLS — meaning Clerk authentication and server-side ownership checks remain mandatory. These checks do not verify all database security properties or establish whether historical unauthorized access occurred.
 
-| Suite | File | Tests | Focus Area | Status |
-|---|---|:---:|---|:---:|
-| **AI JSON Recovery** | `tests/unit/json-recovery.test.ts` | 12 | Markdown code fences, raw control char escaping, unescaped JSX quotes recovery | **PASS** 🟢 |
-| **Project Bundler** | `tests/unit/project-export.test.ts` | 5 | Vite React, Vue 3, CRA package.json, entrypoints, index.html, and Vercel configs | **PASS** 🟢 |
-| **Admin Access Control** | `tests/unit/admin.test.ts` | 6 | Clerk ID matching, non-admin rejection, auto mode lookup, DB error fallback | **PASS** 🟢 |
-| **Version History Auth** | `tests/unit/versions-auth.test.ts` | 5 | 401 unauthenticated, 400 invalid params, 404 unowned workspace (IDOR protection) | **PASS** 🟢 |
-| **Liveblocks Auth** | `tests/unit/liveblocks-auth.test.ts` | 5 | 503 missing secret, 401 unauth, 403 unowned room access, 200 session token issue | **PASS** 🟢 |
-| **Arcjet Rate Limiting** | `tests/unit/arcjet.test.ts` | 1 | Token-bucket configurations for healing (10/min) and deploy (3/min) | **PASS** 🟢 |
-| **Navigation & Auth Guards** | `tests/e2e/navigation-auth.spec.ts` | 7 | Landing page render, prompt preservation across login, 307 redirects on private routes | **PASS** 🟢 |
-| **API Access Control** | `tests/e2e/api-access-control.spec.ts` | 7 | 401 Unauthorized enforcement across private REST endpoints without session cookies | **PASS** 🟢 |
-| **Component Database Lifecycle** | `tests/e2e/component-lifecycle.spec.ts` | 2 | Component creation, querying, foreign-key relational cascade, and responsive viewports | **PASS** 🟢 |
+### Test Inventory (44 Unit Tests + 16 Recorded E2E Tests):
+
+| Suite | File | Tests | Focus Area | Verification Scope |
+|---|---|:---:|---|---|
+| **RLS Catalog Guard & CLI** | `tests/unit/rls-check.test.ts` | 10 | Missing tables, disabled RLS, unexpected policies, extra public tables, CLI, loopback & error sanitization | **PASS (Latest run)** 🟢 |
+| **AI JSON Recovery** | `tests/unit/json-recovery.test.ts` | 12 | Markdown code fences, raw control char escaping, unescaped JSX quotes recovery | **PASS (Latest run)** 🟢 |
+| **Project Bundler** | `tests/unit/project-export.test.ts` | 5 | Vite React, Vue 3, CRA package.json, entrypoints, index.html, and Vercel configs | **PASS (Latest run)** 🟢 |
+| **Admin Access Control** | `tests/unit/admin.test.ts` | 6 | Clerk ID matching, non-admin rejection, auto mode lookup, DB error fallback | **PASS (Latest run)** 🟢 |
+| **Version History Auth** | `tests/unit/versions-auth.test.ts` | 5 | 401 unauthenticated, 400 invalid params, 404 unowned workspace (IDOR protection) | **PASS (Latest run)** 🟢 |
+| **Liveblocks Auth** | `tests/unit/liveblocks-auth.test.ts` | 5 | 503 missing secret, 401 unauth, 403 unowned room access, 200 session token issue | **PASS (Latest run)** 🟢 |
+| **Arcjet Rate Limiting** | `tests/unit/arcjet.test.ts` | 1 | Token-bucket configurations for healing (10/min) and deploy (3/min) | **PASS (Latest run)** 🟢 |
+| **Navigation & Auth Guards** | `tests/e2e/navigation-auth.spec.ts` | 7 | Landing page render, prompt preservation across login, 307 redirects on private routes | **PASS (Recorded prior run)** 🟢 |
+| **API Access Control** | `tests/e2e/api-access-control.spec.ts` | 7 | 401 Unauthorized enforcement across private REST endpoints without session cookies | **PASS (Recorded prior run)** 🟢 |
+| **Component Database Lifecycle** | `tests/e2e/component-lifecycle.spec.ts` | 2 | Component creation, querying, foreign-key relational cascade, and responsive viewports | **PASS (Recorded prior run)** 🟢 |
 
 ---
 

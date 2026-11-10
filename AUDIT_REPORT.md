@@ -163,6 +163,11 @@ Across three structured remediation phases, the application was transformed from
     - **Clerk Auth & Server Ownership Checks Essential**: Because `postgres` bypasses RLS, Clerk authentication and server-side ownership filters (`where: { userId: user.id }`) remain the sole tenant isolation boundary for Prisma endpoints.
     - **Migration Status & Historical Scope Caveats**: `prisma migrate status` confirms tracking entries in `_prisma_migrations` and is not, by itself, proof of zero out-of-band schema drift (such as RLS or policy changes). Furthermore, enabling RLS prevents future unauthorized Supabase Data API access and does not prove whether any historical unauthorized access occurred prior to RLS enforcement.
 
+23. **Focused RLS Regression Check & CI Gate**:
+    - Files: `lib/rls-check.mjs`, `lib/rls-check.d.mts`, `scripts/check-rls.mjs`, `tests/unit/rls-check.test.ts`, `package.json`, `.github/workflows/ci.yml`
+    - Implemented `npm run check:rls:replay` (isolated PGlite migration replay asserting all 5 expected public tables and any additional public tables have `rls_enabled = true` and `0` policies, run automatically in CI without production secrets) and `npm run check:rls:live` (manual read-only catalog inspection excluded from default unit tests and PR CI). Both suppress/sanitize raw driver error messages via `formatSafeRlsError` so credentials, hosts, and ports cannot leak.
+    - Added 10 offline unit tests verifying missing tables, disabled RLS, unexpected policies, unprotected additional public tables, CLI flag guards, loopback enforcement, and sanitized connection-error formatting.
+
 ---
 
 ## 4. Verification Results Matrix
@@ -171,9 +176,11 @@ Across three structured remediation phases, the application was transformed from
 |---|---|---|
 | `npx tsc --noEmit` | **PASS (0 errors)** | Full project type safety verified |
 | `npm run lint` | **PASS (0 errors, 0 warnings)** | All ESLint and React 19 rules satisfied |
-| `npm run build` | **PASS (0 errors)** | 16/16 static and dynamic routes compiled in ~4.5s |
-| `npm test` | **PASS (34/34 passed)** | All unit test suites pass in ~140ms |
-| `npm run test:e2e` | **PASS (16/16 passed)** | All browser and API E2E journeys pass in ~20s |
+| `npm run build` | **PASS (0 errors)** | 16/16 static and dynamic routes compiled cleanly |
+| `npm test` | **PASS (44/44 passed)** | All 7 unit test suites executed and passed offline in ~160ms |
+| `npm run check:rls:replay` | **PASS (5/5 tables)** | Isolated PGlite migration replay executed & verified (checks migration execution & catalog invariants, not PostgREST/native Postgres parity or all database security) |
+| `npm run check:rls:live` | **PASS (5/5 tables)** | Read-only catalog verification via `DIRECT_URL` (`BEGIN READ ONLY`) confirmed default-deny RLS with `0` policies |
+| `npm run test:e2e` | **PASS (16/16 recorded)** | Recorded from prior full portfolio-polish run across 3 Chromium suites (~20s; not re-run in latest security-check pass) |
 | `npx prisma validate` | **PASS** | Prisma schema valid and in sync |
 | `npx prisma migrate status` | **PASS (4 applied)** | All 4 migrations reconciled in `_prisma_migrations` (`prisma migrate diff` reports no schema drift on Prisma-managed objects; not standalone proof against out-of-band DDL drift) |
 | **Isolated Replay (`pglite`)** | **PASS (4/4 applied)** | Fresh-database replay confirmed all 5 tables have `relrowsecurity = true` and `0` policies |
@@ -224,5 +231,5 @@ Across three structured remediation phases, the application was transformed from
 3. **Multi-Framework Project Generation**: Developed a unified build engine supporting Create React App, Vite + React, and Vite + Vue 3, producing complete, installable project bundles for ZIP download and programmatic Vercel deployment.
 4. **Autonomous Error Recovery (Self-Healing)**: Implemented an automated runtime error correction loop that intercepts browser exceptions, debounces inputs, and streams targeted code repairs via Google Gemini with a 3-attempt circuit breaker.
 5. **Defense-in-Depth Security**: Enforced edge-level authentication proxy in Next.js 16, Arcjet token bucket rate limiting (10 req/min healing, 3 req/min deployment), prompt injection defense, and multi-tenant database isolation preventing IDOR attacks.
-6. **Automated Testing & CI Readiness**: Authored a 50-test automated test suite comprising 34 Vitest unit tests (export configs, admin auth, rate limiters, API authorization, JSON recovery) and 16 Playwright E2E tests (route guards, API access controls, database component lifecycle) running cleanly in CI.
+6. **Automated Testing & CI Readiness**: Documented 60 automated tests comprising 44 Vitest unit tests (export configs, admin auth, rate limiters, API authorization, JSON recovery, RLS catalog invariants & error sanitization) and 16 Playwright E2E tests (route guards, API access controls, database component lifecycle), plus isolated PGlite migration replay verification in CI.
 7. **Production Deployment & Resilience**: Deployed production build to Vercel (`https://synthetix-agent.vercel.app`) with custom CI configuration (`.npmrc`), resilient AI streaming JSON recovery, and verified end-to-end multi-file code generation.
